@@ -1,2 +1,3 @@
 dataset
-tb_logs
+logs
+checkpoints
