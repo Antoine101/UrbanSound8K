@@ -7,7 +7,7 @@ Created on Mon Mar  7 17:04:04 2022
 
 import os
 import pandas as pd
-from PIL import image
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torchaudio
@@ -16,15 +16,16 @@ import torchaudio.transforms as transforms
 dataset_path = "dataset"
 
 metadata = pd.read_csv(os.path.join(dataset_path,"UrbanSound8K.csv"))
-
+unique_classes = metadata["class"].unique()
 
 target_sample_rate = 22050
-target_event_length = 4
-n_samples = target_event_length * target_sample_rate 
-n_fft = 2048
+target_length = 4
+n_samples = target_length * target_sample_rate 
+n_fft = 1048
 
 for index, row in metadata.iterrows():
     print(index+1)
+    label = row["class"]
     file_name = row["slice_file_name"]
     fold_nbr = row["fold"]
     file_path = os.path.join(dataset_path, f"fold{fold_nbr}", file_name)
@@ -61,7 +62,15 @@ for index, row in metadata.iterrows():
     spectrogram = spectrogram_transform(signal)
     # Convert amplitude to dB
     db_transform = torchaudio.transforms.AmplitudeToDB(stype="power")
-    spectrogram = db_transform(spectrogram)
-    spectrogram = torch.squeeze(spectrogram)
-    print(spectrogram.shape)
-    image_transform = T.
+    spectrogram_db = db_transform(spectrogram)
+    spectrogram_db = torch.squeeze(spectrogram_db)
+    plt.figure()
+    plt.imshow(spectrogram_db, extent=[0, target_length, 0, target_sample_rate/2], origin="lower", aspect="auto")
+    plt.title(f"{file_name} - Sample rate={target_sample_rate} - n_fft={n_fft}.png", fontweight="bold")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Frequency (Hz)")
+    save_path = os.path.join("features", "spectrograms", label)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)    
+    save_name = f"{file_name} - Sample rate={target_sample_rate} - n_fft={n_fft}.png"
+    plt.savefig(fname=os.path.join(save_path, save_name))
