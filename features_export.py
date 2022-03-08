@@ -16,7 +16,6 @@ import torchaudio.transforms as transforms
 dataset_path = "dataset"
 
 metadata = pd.read_csv(os.path.join(dataset_path,"UrbanSound8K.csv"))
-unique_classes = metadata["class"].unique()
 
 target_sample_rate = 22050
 target_length = 4
