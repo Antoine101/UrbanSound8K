@@ -9,13 +9,13 @@ import torchaudio.transforms as transforms
 
 class UrbanSound8KDataset(Dataset):
     
-    def __init__(self, metadata, dataset_path, transforms_params, device):
+    def __init__(self, dataset_dir, transforms_params, device):
         self.device = device
-        self.metadata = metadata
-        self.dataset_path = dataset_path
-        self.n_folds = max(metadata["fold"])
-        self.n_classes = len(metadata["class"].unique())
-        self.classes_map = pd.Series(metadata["class"].values,index=metadata["classID"]).sort_index().to_dict()
+        self.dataset_dir = dataset_dir
+        self.metadata = pd.read_csv(os.path.join(dataset_dir, "UrbanSound8K.csv"))
+        self.n_folds = max(self.metadata["fold"])
+        self.n_classes = len(self.metadata["class"].unique())
+        self.classes_map = pd.Series(self.metadata["class"].values,index=self.metadata["classID"]).sort_index().to_dict()
         self.target_sample_rate = transforms_params["target_sample_rate"]
         self.target_length = transforms_params["target_length"]
         self.n_samples = transforms_params["n_samples"]
@@ -47,7 +47,7 @@ class UrbanSound8KDataset(Dataset):
     def _get_event_signal(self, index):
         event_fold = f"fold{self.metadata.iloc[index]['fold']}"
         event_filename = self.metadata.iloc[index]["slice_file_name"]
-        audio_path = os.path.join(self.dataset_path, event_fold, event_filename)
+        audio_path = os.path.join(self.dataset_dir, event_fold, event_filename)
         signal, sr = torchaudio.load(audio_path, normalize=True)
         return signal, sr
     

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-class Pipeline(pl.LightningModule):
+class UrbanSound8KNet(pl.LightningModule):
     def __init__(self, out_dim, classes_map, learning_rate, batch_size):
         super().__init__()
         # Save hyperparameters to the checkpoint
@@ -31,10 +31,9 @@ class Pipeline(pl.LightningModule):
             nn.Linear(256, out_dim)
             )
         # Instantiation of the metrics
-        self.accuracy = Accuracy(num_classes=len(classes_map), average="weighted")
-        self.recall = Recall(num_classes=len(classes_map), average="weighted")
-        self.f1_score = F1(num_classes=len(classes_map), average="weighted")
-        self.confmat = ConfusionMatrix(num_classes=len(classes_map))           
+        self.train_accuracy = Accuracy(num_classes=len(classes_map), average="weighted")
+        self.validation_accuracy = Accuracy(num_classes=len(classes_map), average="weighted")
+        self.validation_confmat = ConfusionMatrix(num_classes=len(classes_map))           
         # Instantiation of the classes map
         self.classes_map = classes_map
         # Instantiation of the number of classes
@@ -44,6 +43,7 @@ class Pipeline(pl.LightningModule):
         # Instantiation of the batch size (needed to avoid batch size inference error caused by text returned by the dataset)
         self.batch_size = batch_size
         
+
     def configure_optimizers(self):  
         optimizer = Adam(self.parameters(), lr=self.learning_rate)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=3)   
@@ -56,6 +56,7 @@ class Pipeline(pl.LightningModule):
                         }
                 }
     
+
     def forward(self, x):
         x = self.conv_block(x)
         x = self.flatten(x)
@@ -64,21 +65,14 @@ class Pipeline(pl.LightningModule):
     
         
     def training_step(self, train_batch, batch_idx): 
-        # Unpack the training batch
         _, _, targets, inputs = train_batch
-        # Pass the inputs to the model to get the logits
         logits = self(inputs)
-        # Compute the loss
         loss = F.cross_entropy(logits, targets)
-        # Get the probabilities for each class by applying softmax
-        probs = F.softmax(logits, dim=1)
-        # Get the prediction for each batch sample
-        _, preds = torch.max(probs, 1)
-        # Compute the accuracy
-        accuracy = self.accuracy(logits, targets)
-        # Log the loss
+        predictions = torch.argmax(logits, dim=1)
+        self.train_accuracy(logits, targets)
         self.log("training_loss", loss, on_step=True, on_epoch=True, batch_size=self.batch_size)
-        return {"inputs":inputs, "targets":targets, "predictions":preds, "loss":loss}
+        self.log("training_accuracy", self.train_accuracy, on_step=True, on_epoch=True, batch_size=self.batch_size)        
+        return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss}
     
     
     def training_epoch_end(self, outputs):
@@ -107,18 +101,14 @@ class Pipeline(pl.LightningModule):
         _, audios_name, targets, inputs = validation_batch
         # Pass the inputs to the model to get the logits
         logits = self(inputs)
-        # Compute the loss and log it for early stopping monitoring
         loss = F.cross_entropy(logits, targets)
-        # Get the probabilities for each class by applying softmax
-        probs = F.softmax(logits, dim=1)
-        # Get the prediction for each batch sample
-        _, preds = torch.max(probs, 1)
-        # Compute the accuracy for this batch
-        accuracy = self.accuracy(preds, targets)
+        predictions = torch.argmax(logits, dim=1)
+        self.validation_accuracy(predictions, targets)
+        self.validation_confmat.update(predictions, targets)
         # Log the loss and the accuracy
         self.log("validation_loss", loss, on_step=True, on_epoch=True, batch_size=self.batch_size)
-        self.log("validation_accuracy", accuracy, on_step=True, on_epoch=True, batch_size=self.batch_size)
-        return {"inputs":inputs, "targets":targets, "predictions":preds, "loss":loss, "audios_name":audios_name}
+        self.log("validation_accuracy", self.validation_accuracy, on_step=True, on_epoch=True, batch_size=self.batch_size)
+        return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss, "audios_name":audios_name}
     
     
     def validation_epoch_end(self, outputs):
@@ -132,8 +122,9 @@ class Pipeline(pl.LightningModule):
         for i in range(len(preds)):
             self.logger.experiment.add_text("Predictions on validation set", f"Audio: {audios_name[i]} - Class: {targets[i]} - Predicted: {preds[i]}")
         # Compute the confusion matrix, turn it into a DataFrame, generate the plot and log it
-        cm = self.confmat(preds, targets)
+        cm = self.validation_confmat.compute()
         cm = cm.cpu()
+        self.validation_confmat.reset()
         for class_id in range(self.n_classes):
                 precision = cm[class_id, class_id] / torch.sum(cm[:,class_id])
                 precision = round(precision.item()*100,1)
