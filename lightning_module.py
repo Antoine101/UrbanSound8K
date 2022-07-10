@@ -10,42 +10,20 @@ import seaborn as sns
 
 
 class UrbanSound8KNet(pl.LightningModule):
-    def __init__(self, out_dim, classes_map, learning_rate, batch_size):
+    def __init__(self, n_classes, classes_map, learning_rate, batch_size, model):
         super().__init__()
         # Save hyperparameters to the checkpoint
-        self.save_hyperparameters()        
-        # Definition of the model
-        self.conv_block = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=5, stride=1, padding=2),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, stride=1, padding=2),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Dropout2d(p=0.3)
-            )
-        self.flatten = nn.Sequential(nn.Flatten()) 
-        self.dense = nn.Sequential(
-            nn.Linear(128 * 16 * 86, 512),
-            nn.Linear(512, 256),
-            nn.Linear(256, out_dim)
-            )
+        self.save_hyperparameters(ignore=["model"])   
+        self.model = model     
+
         # Instantiation of the metrics
-        self.train_accuracy = Accuracy(num_classes=len(classes_map), average="weighted")
-        self.validation_accuracy = Accuracy(num_classes=len(classes_map), average="weighted")
-        self.validation_confmat = ConfusionMatrix(num_classes=len(classes_map))           
-        # Instantiation of the classes map
-        self.classes_map = classes_map
-        # Instantiation of the number of classes
-        self.n_classes = len(classes_map)
-        # Instatiation of the learning rate
-        self.learning_rate = learning_rate
-        # Instantiation of the batch size (needed to avoid batch size inference error caused by text returned by the dataset)
-        self.batch_size = batch_size
+        self.train_accuracy = Accuracy(num_classes=self.hparams.n_classes, average="weighted")
+        self.validation_accuracy = Accuracy(num_classes=self.hparams.n_classes, average="weighted")
+        self.validation_confmat = ConfusionMatrix(num_classes=self.hparams.n_classes)           
         
 
     def configure_optimizers(self):  
-        optimizer = Adam(self.parameters(), lr=self.learning_rate)
+        optimizer = Adam(self.parameters(), lr=self.hparams.learning_rate)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=3)   
         return {
                 "optimizer": optimizer,
@@ -56,22 +34,15 @@ class UrbanSound8KNet(pl.LightningModule):
                         }
                 }
     
-
-    def forward(self, x):
-        x = self.conv_block(x)
-        x = self.flatten(x)
-        logits = self.dense(x)
-        return logits 
-    
         
     def training_step(self, train_batch, batch_idx): 
         _, _, targets, inputs = train_batch
-        logits = self(inputs)
+        logits = self.model(inputs)
         loss = F.cross_entropy(logits, targets)
         predictions = torch.argmax(logits, dim=1)
         self.train_accuracy(logits, targets)
-        self.log("training_loss", loss, on_step=True, on_epoch=True, batch_size=self.batch_size)
-        self.log("training_accuracy", self.train_accuracy, on_step=True, on_epoch=True, batch_size=self.batch_size)        
+        self.log("training_loss", loss, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("training_accuracy", self.train_accuracy, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)        
         return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss}
     
     
@@ -100,14 +71,14 @@ class UrbanSound8KNet(pl.LightningModule):
         # Unpack the validation batch
         _, audios_name, targets, inputs = validation_batch
         # Pass the inputs to the model to get the logits
-        logits = self(inputs)
+        logits = self.model(inputs)
         loss = F.cross_entropy(logits, targets)
         predictions = torch.argmax(logits, dim=1)
         self.validation_accuracy(predictions, targets)
         self.validation_confmat.update(predictions, targets)
         # Log the loss and the accuracy
-        self.log("validation_loss", loss, on_step=True, on_epoch=True, batch_size=self.batch_size)
-        self.log("validation_accuracy", self.validation_accuracy, on_step=True, on_epoch=True, batch_size=self.batch_size)
+        self.log("validation_loss", loss, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("validation_accuracy", self.validation_accuracy, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
         return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss, "audios_name":audios_name}
     
     

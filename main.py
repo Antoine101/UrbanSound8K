@@ -1,12 +1,9 @@
-import os
 from argparse import ArgumentParser
 import utils
-import pandas as pd
 import warnings
 import dataset
-import datamodule
+import model
 import lightning_module
-import torch
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
@@ -15,12 +12,12 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 if __name__ == "__main__":
 
-    # Filter harmless warnings
+    # Filtering of the harmless warnings
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     warnings.filterwarnings("ignore", ".*Your `val_dataloader` has `shuffle=True`.*")
     warnings.filterwarnings("ignore", ".*Checkpoint directory.*")
 
-    # Parse command line arguments
+    # Parsing of the command line arguments
     parser = ArgumentParser()
     parser.add_argument("--accelerator", default="gpu", help="Type of accelerator: 'gpu', 'cpu', 'auto'")
     parser.add_argument("--devices", default="auto", help="Number of devices (GPUs or CPU cores) to use: integer starting from 1 or 'auto'")
@@ -30,37 +27,47 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.1, help="Initial learning rate")
     args = parser.parse_args()
 
-    # Print summary of selected arguments and adjust them if needed
+    # Printing of the selected arguments summary and adjustments if needed
     args = utils.args_interpreter(args)
 
-    # Instantiate the dataset
+    # Audio pre-processing parameters
     target_sample_rate = 22050
     target_length = 4
     n_samples = target_length * target_sample_rate
     n_fft = 512
+    hop_denominator = 2
     n_mels = 64
+    n_mfcc = 40
     transforms_params = {
         "target_sample_rate": target_sample_rate,
         "target_length": target_length,
         "n_samples": n_samples,
         "n_fft": n_fft,
-        "n_mels": n_mels
+        "hop_denominator": hop_denominator,
+        "n_mels": n_mels,
+        "n_mfcc": n_mfcc
     }
 
-    ds = dataset.UrbanSound8KDataset("dataset", transforms_params, args.device)
-    #####dm = datamodule.UrbanSound8KDataModule(args.bs, args.workers)
+    # Instantiation of the dataset
+    ds = dataset.UrbanSound8KDataset(dataset_path="dataset", transforms_params=transforms_params, device=args.accelerator)
 
-    for i in range(1, dataset.n_folds+1):
+    # Instantiation of the model
+    model = model.Model(input_height=ds[0][3].size(1), input_width=ds[0][3].size(2), output_neurons=len(ds.classes_map))
+
+    # Instantiation of the lightning module
+    lm = lightning_module.UrbanSound8KNet(n_classes=ds.n_classes, classes_map=ds.classes_map, learning_rate=args.lr, batch_size=args.bs, model=model) 
+
+    for i in range(1, ds.n_folds+1):
     
-        print(f"========== Cross-validation {i} on {dataset.n_folds} ==========")
+        print(f"========== Cross-validation {i} on {ds.n_folds} ==========")
 
-        # Get the train and validation sets
-        train_metadata = dataset.metadata.drop(dataset.metadata[dataset.metadata["fold"]==i].index)
+        # Determination of the train and validation sets indices
+        train_metadata = ds.metadata.drop(ds.metadata[ds.metadata["fold"]==i].index)
         train_indices = train_metadata.index.to_list() 
         train_sampler = SubsetRandomSampler(train_indices)
-        validation_indices = dataset.metadata[dataset.metadata["fold"]==i].index.to_list()
+        validation_indices = ds.metadata[ds.metadata["fold"]==i].index.to_list()
     
-        # Create the train and validation dataloaders
+        # Creation of the train and validation dataloaders
         train_dataloader = DataLoader(
                                         ds, 
                                         batch_size=args.bs, 
@@ -75,18 +82,16 @@ if __name__ == "__main__":
                                             num_workers=args.workers
                                         )
 
-        ###dm = datamodule.UrbanSound8KDataModule(dataset_dir="dataset", validation_fold=i, batch_size=args.bs, num_workers=args.workers)
-
-        # Instantiate the logger
+        # Instantiation of the logger
         tensorboard_logger = TensorBoardLogger(save_dir="logs")
 
-        # Instantiate early stopping based on epoch validation loss
+        # Instantiation of the early stopping callback
         early_stopping = EarlyStopping("validation_loss", patience=20, verbose=True)
 
-        # Instantiate a learning rate monitor
+        # Instantiation of the learning rate monitor callback
         lr_monitor = LearningRateMonitor(logging_interval='epoch')
 
-        # Instantiate a checkpoint callback
+        # Instantiation of the checkpoint callback
         checkpoint = ModelCheckpoint(
                                         dirpath=f"./checkpoints/",
                                         filename="{epoch}-{validation_loss:.2f}",
@@ -98,7 +103,7 @@ if __name__ == "__main__":
                                         save_weights_only=True
                                     )
 
-        # Instantiate the trainer
+        # Instantiation of the trainer
         trainer = Trainer(
                             accelerator=args.accelerator,
                             devices=args.devices,
@@ -107,9 +112,7 @@ if __name__ == "__main__":
                             log_every_n_steps = 1,
                             callbacks=[early_stopping, lr_monitor, checkpoint]
                         ) 
+ 
 
-    # Instantiate the pipeline
-    lm = lightning_module.UrbanSound8KNet(learning_rate=args.lr, batch_size=args.bs)  
-    
     # Fit the trainer on the training set
     trainer.fit(lm, train_dataloader, validation_dataloader)

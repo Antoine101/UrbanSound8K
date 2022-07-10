@@ -9,10 +9,10 @@ import torchaudio.transforms as transforms
 
 class UrbanSound8KDataset(Dataset):
     
-    def __init__(self, dataset_dir, transforms_params, device):
+    def __init__(self, dataset_path, transforms_params, device):
         self.device = device
-        self.dataset_dir = dataset_dir
-        self.metadata = pd.read_csv(os.path.join(dataset_dir, "UrbanSound8K.csv"))
+        self.dataset_path = dataset_path
+        self.metadata = pd.read_csv(os.path.join(dataset_path, "UrbanSound8K.csv"))
         self.n_folds = max(self.metadata["fold"])
         self.n_classes = len(self.metadata["class"].unique())
         self.classes_map = pd.Series(self.metadata["class"].values,index=self.metadata["classID"]).sort_index().to_dict()
@@ -20,7 +20,9 @@ class UrbanSound8KDataset(Dataset):
         self.target_length = transforms_params["target_length"]
         self.n_samples = transforms_params["n_samples"]
         self.n_fft = transforms_params["n_fft"]
+        self.hop_denominator = transforms_params["hop_denominator"]
         self.n_mels = transforms_params["n_mels"]
+        self.n_mfcc = transforms_params["n_mfcc"]
         
     def __len__(self):
         return len(self.metadata)
@@ -34,9 +36,12 @@ class UrbanSound8KDataset(Dataset):
         signal = self._resample_if_necessary(signal, sr)
         signal = self._cut_if_necessary(signal)
         signal = self._right_pad_if_necessary(signal)
-        mel_spectrogram = self._mel_spectrogram_transform(signal)
-        mel_spectrogram_db = self._db_transform(mel_spectrogram)
-        return index, audio_name, class_id, mel_spectrogram_db
+        #spectrogram = self._spectrogram_transform(signal)
+        #feature = self._db_transform(spectrogram)
+        #mel_spectrogram = self._mel_spectrogram_transform(signal)
+        #feature = self._db_transform(mel_spectrogram)
+        feature = self._mfcc_transform(signal)
+        return index, audio_name, class_id, feature
     
     def _get_event_class_id(self, index):
         return self.metadata.iloc[index]["classID"]
@@ -80,7 +85,7 @@ class UrbanSound8KDataset(Dataset):
         spectrogram_transform = transforms.Spectrogram(
                                                         n_fft = self.n_fft,
                                                         win_length = self.n_fft,
-                                                        hop_length = self.n_fft // 2,
+                                                        hop_length = self.n_fft // self.hop_denominator,
                                                         pad = 0,
                                                         window_fn = torch.hann_window,
                                                         power = 2,
@@ -113,9 +118,25 @@ class UrbanSound8KDataset(Dataset):
         mel_spectrogram_transform = mel_spectrogram_transform.to(self.device)
         mel_spectrogram = mel_spectrogram_transform(signal)
         return mel_spectrogram
+
+    def _mfcc_transform(self, signal):
+        mfcc_transform = torchaudio.transforms.MFCC(
+                                                    sample_rate = self.target_sample_rate,
+                                                    n_mfcc = self.n_mfcc,
+                                                    dct_type = 2,
+                                                    norm = "ortho",
+                                                    log_mels = False 
+                                                    )
     
-    def _db_transform(self, mel_spectrogram):
+    def _db_transform(self, spectrogram):
         db_transform = torchaudio.transforms.AmplitudeToDB(stype="power")
         db_transform = db_transform.to(self.device)
-        mel_spectrogram_db = db_transform(mel_spectrogram)
-        return mel_spectrogram_db
+        spectrogram_db = db_transform(spectrogram)
+        return spectrogram_db
+
+    def _augmentation(self, feature):
+        frequency_masking = transforms.FrequencyMasking(freq_mask_param=80)
+        time_masking = transforms.TimeMasking(time_mask_param=80, p=1.0)
+        feature = frequency_masking(feature)
+        feature = time_masking(feature)
+        return feature
