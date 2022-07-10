@@ -38,9 +38,9 @@ class UrbanSound8KDataset(Dataset):
         signal = self._right_pad_if_necessary(signal)
         #spectrogram = self._spectrogram_transform(signal)
         #feature = self._db_transform(spectrogram)
-        #mel_spectrogram = self._mel_spectrogram_transform(signal)
-        #feature = self._db_transform(mel_spectrogram)
-        feature = self._mfcc_transform(signal)
+        mel_spectrogram = self._mel_spectrogram_transform(signal)
+        feature = self._db_transform(mel_spectrogram)
+        #feature = self._mfcc_transform(signal)
         return index, audio_name, class_id, feature
     
     def _get_event_class_id(self, index):
@@ -52,7 +52,7 @@ class UrbanSound8KDataset(Dataset):
     def _get_event_signal(self, index):
         event_fold = f"fold{self.metadata.iloc[index]['fold']}"
         event_filename = self.metadata.iloc[index]["slice_file_name"]
-        audio_path = os.path.join(self.dataset_dir, event_fold, event_filename)
+        audio_path = os.path.join(self.dataset_path, event_fold, event_filename)
         signal, sr = torchaudio.load(audio_path, normalize=True)
         return signal, sr
     

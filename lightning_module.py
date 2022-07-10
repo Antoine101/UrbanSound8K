@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim import Adam, lr_scheduler
-from torchmetrics import Accuracy, Precision, Recall, F1, ConfusionMatrix
+from torchmetrics import Accuracy, ConfusionMatrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -54,7 +54,7 @@ class UrbanSound8KNet(pl.LightningModule):
         if self.current_epoch == 0:
             input_sample = outputs[0]["inputs"][0]
             input_sample_target = outputs[0]["targets"][0].item()
-            input_sample_class = self.classes_map[input_sample_target]
+            input_sample_class = self.hparams.classes_map[input_sample_target]
             fig = plt.figure(figsize=(20,20))
             ax = fig.add_subplot(111)
             ax.imshow(torch.squeeze(input_sample).cpu(), cmap="viridis", origin="lower", aspect="auto")
@@ -96,14 +96,14 @@ class UrbanSound8KNet(pl.LightningModule):
         cm = self.validation_confmat.compute()
         cm = cm.cpu()
         self.validation_confmat.reset()
-        for class_id in range(self.n_classes):
+        for class_id in range(self.hparams.n_classes):
                 precision = cm[class_id, class_id] / torch.sum(cm[:,class_id])
                 precision = round(precision.item()*100,1)
                 self.log(f"validation_precision/{class_id}", precision)
                 recall = cm[class_id, class_id] / torch.sum(cm[class_id,:])
                 recall = round(recall.item()*100,1)
                 self.log(f"validation_recall/{class_id}", recall)
-        df_cm = pd.DataFrame(cm.numpy(), index = range(self.n_classes), columns=range(self.n_classes))
+        df_cm = pd.DataFrame(cm.numpy(), index = range(self.hparams.n_classes), columns=range(self.hparams.n_classes))
         plt.figure()
         fig = sns.heatmap(df_cm, annot=True, cmap='Spectral').get_figure()
         plt.yticks(rotation=0)
