@@ -4,6 +4,7 @@ import warnings
 import dataset
 import model
 import lightning_module
+import torch
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
@@ -19,11 +20,11 @@ if __name__ == "__main__":
 
     # Parsing of the command line arguments
     parser = ArgumentParser()
-    parser.add_argument("--accelerator", default="cpu", help="Type of accelerator: 'gpu', 'cpu', 'auto'")
+    parser.add_argument("--accelerator", default="auto", help="Type of accelerator: 'gpu', 'cpu', 'auto'")
     parser.add_argument("--devices", default="auto", help="Number of devices (GPUs or CPU cores) to use: integer starting from 1 or 'auto'")
-    parser.add_argument("--workers", type=int, default=4, help="Number of CPU cores to use as as workers for the dataloarders: integer starting from 1 to maximum number of cores on this machine")
+    parser.add_argument("--workers", type=int, default=0, help="Number of CPU cores to use as as workers for the dataloarders: integer starting from 1 to maximum number of cores on this machine")
     parser.add_argument("--epochs", type=int, default=60, help="Maximum number of epochs to run for")
-    parser.add_argument("--bs", type=int, default=256, help="Batch size")
+    parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--lr", type=float, default=0.1, help="Initial learning rate")
     args = parser.parse_args()
 
@@ -49,7 +50,7 @@ if __name__ == "__main__":
     }
 
     # Instantiation of the dataset
-    ds = dataset.UrbanSound8KDataset(dataset_path="dataset", transforms_params=transforms_params, device=args.accelerator)
+    ds = dataset.UrbanSound8KDataset(dataset_path="dataset", transforms_params=transforms_params)
 
     # Instantiation of the model
     model = model.Model(input_height=ds[0][3].size(1), input_width=ds[0][3].size(2), output_neurons=len(ds.classes_map))
@@ -58,7 +59,8 @@ if __name__ == "__main__":
     lm = lightning_module.UrbanSound8KNet(n_classes=ds.n_classes, classes_map=ds.classes_map, learning_rate=args.lr, batch_size=args.bs, model=model) 
 
     for i in range(1, ds.n_folds+1):
-    
+        
+        print("\n")
         print(f"========== Cross-validation {i} on {ds.n_folds} ==========")
 
         # Determination of the train and validation sets indices

@@ -9,8 +9,11 @@ import torchaudio.transforms as transforms
 
 class UrbanSound8KDataset(Dataset):
     
-    def __init__(self, dataset_path, transforms_params, device):
-        self.device = device
+    def __init__(self, dataset_path, transforms_params):
+        if torch.cuda.is_available():
+            self.accelerator = "cuda"
+        else:
+            self.accelerator = "cpu"
         self.dataset_path = dataset_path
         self.metadata = pd.read_csv(os.path.join(dataset_path, "UrbanSound8K.csv"))
         self.n_folds = max(self.metadata["fold"])
@@ -31,7 +34,7 @@ class UrbanSound8KDataset(Dataset):
         audio_name = self._get_event_audio_name(index)
         class_id = torch.tensor(self._get_event_class_id(index), dtype=torch.long)
         signal, sr = self._get_event_signal(index)
-        signal = signal.to(self.device)
+        #signal = signal.to(self.accelerator)
         signal = self._mix_down_if_necessary(signal)
         signal = self._resample_if_necessary(signal, sr)
         signal = self._cut_if_necessary(signal)
@@ -41,6 +44,7 @@ class UrbanSound8KDataset(Dataset):
         mel_spectrogram = self._mel_spectrogram_transform(signal)
         feature = self._db_transform(mel_spectrogram)
         #feature = self._mfcc_transform(signal)
+        feature = self._augmentation(feature)
         return index, audio_name, class_id, feature
     
     def _get_event_class_id(self, index):
@@ -63,8 +67,8 @@ class UrbanSound8KDataset(Dataset):
         
     def _resample_if_necessary(self, signal, sr):
         if sr != self.target_sample_rate:
-            resample_transform = torchaudio.transforms.Resample(sr, self.target_sample_rate)
-            resample_transform = resample_transform.to(self.device)
+            resample_transform = transforms.Resample(sr, self.target_sample_rate)
+            #resample_transform = resample_transform.to(self.accelerator)
             signal = resample_transform(signal)
         return signal
     
@@ -96,12 +100,12 @@ class UrbanSound8KDataset(Dataset):
                                                         onesided = True,
                                                         return_complex = False
                                                         )  
-        spectrogram_transform = spectrogram_transform.to(self.device)
+        #spectrogram_transform = spectrogram_transform.to(self.accelerator)
         spectrogram = spectrogram_transform(signal)
         return spectrogram
     
     def _mel_spectrogram_transform(self, signal):
-        mel_spectrogram_transform = torchaudio.transforms.MelSpectrogram(
+        mel_spectrogram_transform = transforms.MelSpectrogram(
                                                         sample_rate = self.target_sample_rate,
                                                         n_fft = self.n_fft,
                                                         n_mels = self.n_mels,
@@ -115,28 +119,33 @@ class UrbanSound8KDataset(Dataset):
                                                         norm = None,
                                                         mel_scale = "htk"
                                                         )
-        mel_spectrogram_transform = mel_spectrogram_transform.to(self.device)
+        #mel_spectrogram_transform = mel_spectrogram_transform.to(self.accelerator)
         mel_spectrogram = mel_spectrogram_transform(signal)
         return mel_spectrogram
 
     def _mfcc_transform(self, signal):
-        mfcc_transform = torchaudio.transforms.MFCC(
+        mfcc_transform = transforms.MFCC(
                                                     sample_rate = self.target_sample_rate,
                                                     n_mfcc = self.n_mfcc,
                                                     dct_type = 2,
                                                     norm = "ortho",
                                                     log_mels = False 
                                                     )
+        #mfcc_transform = mfcc_transform.to(self.accelerator)
+        mfcc = mfcc_transform(signal)
+        return mfcc
     
     def _db_transform(self, spectrogram):
-        db_transform = torchaudio.transforms.AmplitudeToDB(stype="power")
-        db_transform = db_transform.to(self.device)
+        db_transform = transforms.AmplitudeToDB(stype="power")
+        #db_transform = db_transform.to(self.accelerator)
         spectrogram_db = db_transform(spectrogram)
         return spectrogram_db
 
     def _augmentation(self, feature):
         frequency_masking = transforms.FrequencyMasking(freq_mask_param=80)
         time_masking = transforms.TimeMasking(time_mask_param=80, p=1.0)
+        #frequency_masking = frequency_masking.to(self.accelerator)
+        #time_masking = time_masking.to(self.accelerator)
         feature = frequency_masking(feature)
         feature = time_masking(feature)
         return feature

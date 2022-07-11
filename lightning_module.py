@@ -1,7 +1,6 @@
 import pandas as pd
 import torch
 import pytorch_lightning as pl
-import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim import Adam, lr_scheduler
 from torchmetrics import Accuracy, ConfusionMatrix
