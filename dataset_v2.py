@@ -9,12 +9,14 @@ import torchaudio.transforms as transforms
 
 class UrbanSound8KDataset(Dataset):
     
-    def __init__(self, dataset_path, transforms_params):
+    def __init__(self, dataset_path, validation_fold, transforms_params, train):
         self.dataset_path = dataset_path
-        self.metadata = pd.read_csv(os.path.join(dataset_path, "UrbanSound8K.csv"))
-        self.n_folds = max(self.metadata["fold"])
-        self.n_classes = len(self.metadata["class"].unique())
-        self.classes_map = pd.Series(self.metadata["class"].values,index=self.metadata["classID"]).sort_index().to_dict()
+        metadata = pd.read_csv(os.path.join(dataset_path, "UrbanSound8K.csv"))
+        if train:
+            self.metadata = metadata[metadata["fold"] != validation_fold].reset_index(drop=True)
+        else:
+            self.metadata = metadata[metadata["fold"] == validation_fold].reset_index(drop=True)
+        self.train = train
         self.target_sample_rate = transforms_params["target_sample_rate"]
         self.target_length = transforms_params["target_length"]
         self.n_samples = transforms_params["n_samples"]
@@ -40,6 +42,8 @@ class UrbanSound8KDataset(Dataset):
         mel_spectrogram = self._mel_spectrogram_transform(signal)
         feature = self._db_transform(mel_spectrogram)
         #feature = self._mfcc_transform(signal)
+        if self.train:
+            feature = self._augmentation(feature)
         return index, audio_name, class_id, feature
     
     def _get_event_class_id(self, index):

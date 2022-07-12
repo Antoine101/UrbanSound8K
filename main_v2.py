@@ -1,10 +1,10 @@
 from argparse import ArgumentParser
 import utils
 import warnings
-import dataset
+import pandas as pd
 import model
 import lightning_module
-from torch.utils.data import DataLoader, SubsetRandomSampler
+import lightning_data_module
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -31,6 +31,11 @@ if __name__ == "__main__":
     # stments if needed
     args = utils.args_interpreter(args)
 
+    # Loading of the dataset metadata to retrieve the number of classes on {label_id: label_name} mapping dictionnary
+    metadata = pd.read_csv("dataset/UrbanSound8K.csv")
+    n_classes = len(metadata["class"].unique())
+    classes_map = pd.Series(metadata["class"].values, index=metadata["classID"]).sort_index().to_dict()
+
     # Audio pre-processing parameters
     target_sample_rate = 22050
     target_length = 4
@@ -49,40 +54,21 @@ if __name__ == "__main__":
         "n_mfcc": n_mfcc
     }
 
-    # Instantiation of the dataset
-    ds = dataset.UrbanSound8KDataset(dataset_path="dataset", transforms_params=transforms_params)
+    input_height, input_width = compute_input_dimensions(feature="mfcc", transforms_params)
 
-    # Instantiation of the model
-    model = model.UrbanSound8KModel(input_height=ds[0][3].size(1), input_width=ds[0][3].size(2), output_neurons=len(ds.classes_map))
-
-    # Instantiation of the lightning module
-    lm = lightning_module.UrbanSound8KModule(n_classes=ds.n_classes, classes_map=ds.classes_map, learning_rate=args.lr, batch_size=args.bs, model=model) 
-
-    for i in range(1, ds.n_folds+1):
+    for i in range(1, 11):
         
         print("\n")
-        print(f"========== Cross-validation {i} on {ds.n_folds} ==========")
+        print(f"========== Cross-validation {i} on {10} ==========")
 
-        # Determination of the train and validation sets indices
-        train_metadata = ds.metadata.drop(ds.metadata[ds.metadata["fold"]==i].index)
-        train_indices = train_metadata.index.to_list() 
-        train_sampler = SubsetRandomSampler(train_indices)
-        validation_indices = ds.metadata[ds.metadata["fold"]==i].index.to_list()
-    
-        # Creation of the train and validation dataloaders
-        train_dataloader = DataLoader(
-                                        ds, 
-                                        batch_size=args.bs, 
-                                        sampler=train_sampler,
-                                        num_workers=args.workers
-                                    )
-    
-        validation_dataloader = DataLoader(
-                                            ds, 
-                                            sampler=validation_indices,
-                                            batch_size=args.bs,
-                                            num_workers=args.workers
-                                        )
+        # Instiation of the lightning data module
+        dm = lightning_data_module.UrbanSound8KDataModule(batch_size=args.bs, transforms_params=transforms_params, validation_fold=i)
+
+        # Instantiation of the model
+        model = model.UrbanSound8KModel(input_height=input_height, input_width=input_width, output_neurons=10)
+
+        # Instantiation of the lightning module
+        lm = lightning_module.UrbanSound8KModule(n_classes=n_classes, classes_map=classes_map, learning_rate=args.lr, batch_size=args.bs, model=model) 
 
         # Instantiation of the logger
         tensorboard_logger = TensorBoardLogger(save_dir=".")
@@ -117,4 +103,4 @@ if __name__ == "__main__":
  
 
         # Fit the trainer on the training set
-        trainer.fit(lm, train_dataloader, validation_dataloader)
+        trainer.fit(lm, dm)

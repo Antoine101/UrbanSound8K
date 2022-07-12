@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Model(nn.Module):
+class UrbanSound8KModel(nn.Module):
     def __init__(self, input_height, input_width, output_neurons) -> None:
         super().__init__()
         # Definition of the model

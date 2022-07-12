@@ -1,0 +1,5 @@
+def compute_input_dimensions(feature, transforms_params):
+    if feature == "mfcc":
+        input_height = transforms_params["n_mfcc"]
+        input_width = 
+    return input_height, input_width

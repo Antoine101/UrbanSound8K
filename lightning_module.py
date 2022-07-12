@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-class UrbanSound8KNet(pl.LightningModule):
+class UrbanSound8KModule(pl.LightningModule):
     def __init__(self, n_classes, classes_map, learning_rate, batch_size, model):
         super().__init__()
         # Save hyperparameters to the checkpoint
