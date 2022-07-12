@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--accelerator", default="auto", help="Type of accelerator: 'gpu', 'cpu', 'auto'")
     parser.add_argument("--devices", default="auto", help="Number of devices (GPUs or CPU cores) to use: integer starting from 1 or 'auto'")
     parser.add_argument("--workers", type=int, default=4, help="Number of CPU cores to use as as workers for the dataloarders: integer starting from 1 to maximum number of cores on this machine")
-    parser.add_argument("--epochs", type=int, default=60, help="Maximum number of epochs to run for")
+    parser.add_argument("--epochs", type=int, default=5, help="Maximum number of epochs to run for")
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--lr", type=float, default=0.1, help="Initial learning rate")
     args = parser.parse_args()
@@ -54,7 +54,10 @@ if __name__ == "__main__":
         "n_mfcc": n_mfcc
     }
 
-    input_height, input_width = compute_input_dimensions(feature="mfcc", transforms_params)
+    # Calculation of the input height and width to pass to the model for adjustment of fc1 in_features
+    input_height = n_mels
+    input_width = (n_samples + n_fft) // (n_fft - (n_fft // hop_denominator))
+    print(f"Input dimensions: {input_height}x{input_width}")
 
     for i in range(1, 11):
         
@@ -62,7 +65,7 @@ if __name__ == "__main__":
         print(f"========== Cross-validation {i} on {10} ==========")
 
         # Instiation of the lightning data module
-        dm = lightning_data_module.UrbanSound8KDataModule(batch_size=args.bs, transforms_params=transforms_params, validation_fold=i)
+        dm = lightning_data_module.UrbanSound8KDataModule(batch_size=args.bs, num_workers=args.workers, transforms_params=transforms_params, validation_fold=i)
 
         # Instantiation of the model
         model = model.UrbanSound8KModel(input_height=input_height, input_width=input_width, output_neurons=10)
@@ -74,21 +77,26 @@ if __name__ == "__main__":
         tensorboard_logger = TensorBoardLogger(save_dir=".")
 
         # Instantiation of the early stopping callback
-        early_stopping = EarlyStopping("validation_loss", patience=20, verbose=True)
+        early_stopping = EarlyStopping(
+                                        monitor = "validation_loss",
+                                        min_delta = 0.01,
+                                        patience=20, 
+                                        verbose=True
+                                        )
 
         # Instantiation of the learning rate monitor callback
         lr_monitor = LearningRateMonitor(logging_interval='epoch')
 
         # Instantiation of the checkpoint callback
         checkpoint = ModelCheckpoint(
-                                        dirpath=f"./checkpoints/",
-                                        filename="{epoch}-{validation_loss:.2f}",
-                                        verbose=True,
-                                        monitor="validation_loss",
-                                        save_last = False,
-                                        save_top_k=1,      
-                                        mode="min",
-                                        save_weights_only=True
+                                    dirpath=f"./checkpoints/",
+                                    filename="{epoch}-{validation_loss:.2f}",
+                                    verbose=True,
+                                    monitor="validation_loss",
+                                    save_last = False,
+                                    save_top_k=1,      
+                                    mode="min",
+                                    save_weights_only=True
                                     )
 
         # Instantiation of the trainer
