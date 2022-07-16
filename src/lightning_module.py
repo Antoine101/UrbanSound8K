@@ -35,7 +35,7 @@ class UrbanSound8KModule(pl.LightningModule):
     
         
     def training_step(self, train_batch, batch_idx): 
-        _, _, targets, inputs = train_batch
+        index, audio_name, targets, inputs = train_batch
         logits = self.model(inputs)
         loss = F.cross_entropy(logits, targets)
         predictions = torch.argmax(logits, dim=1)
@@ -68,7 +68,7 @@ class UrbanSound8KModule(pl.LightningModule):
             
     def validation_step(self, validation_batch, batch_idx):
         # Unpack the validation batch
-        _, audios_name, targets, inputs = validation_batch
+        index, audio_name, targets, inputs = validation_batch
         # Pass the inputs to the model to get the logits
         logits = self.model(inputs)
         loss = F.cross_entropy(logits, targets)
@@ -78,7 +78,7 @@ class UrbanSound8KModule(pl.LightningModule):
         # Log the loss and the accuracy
         self.log("validation_loss", loss, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
         self.log("validation_accuracy", self.validation_accuracy, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
-        return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss, "audios_name":audios_name}
+        return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss, "audio_name":audio_name}
     
     
     def validation_epoch_end(self, outputs):
@@ -87,10 +87,10 @@ class UrbanSound8KModule(pl.LightningModule):
         # Concatenate the targets of all batches
         targets = torch.cat([output["targets"] for output in outputs])
         # Concatenate the audios name of all batches
-        audios_name_tuples_list = [output["audios_name"] for output in outputs]
-        audios_name = [audio_name for audios_name_tuples in audios_name_tuples_list for audio_name in audios_name_tuples]
+        audio_name_tuples_list = [output["audio_name"] for output in outputs]
+        audio_name = [audio_name for audio_name_tuples in audio_name_tuples_list for audio_name in audio_name_tuples]
         for i in range(len(preds)):
-            self.logger.experiment.add_text("Predictions on validation set", f"Audio: {audios_name[i]} - Class: {targets[i]} - Predicted: {preds[i]}")
+            self.logger.experiment.add_text("Predictions on validation set", f"Audio: {audio_name[i]} - Class: {targets[i]} - Predicted: {preds[i]}")
         # Compute the confusion matrix, turn it into a DataFrame, generate the plot and log it
         cm = self.validation_confmat.compute()
         cm = cm.cpu()
