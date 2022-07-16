@@ -38,11 +38,23 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
 
 
     def train_dataloader(self):
-        train_dataloader = DataLoader(self.train_ds, batch_size=self.hparams.batch_size, num_workers=self.hparams.num_workers, pin_memory=True)
+        train_dataloader = DataLoader(
+                                    dataset=self.train_ds, 
+                                    batch_size=self.hparams.batch_size, 
+                                    shuffle=True,
+                                    num_workers=self.hparams.num_workers, 
+                                    pin_memory=True
+                                    )
         return train_dataloader
 
 
     def val_dataloader(self):
-        validation_dataloader = DataLoader(self.validation_ds, batch_size=self.hparams.batch_size, num_workers=self.hparams.num_workers, pin_memory=True)
+        validation_dataloader = DataLoader(
+                                    dataset=self.validation_ds, 
+                                    batch_size=self.hparams.batch_size,
+                                    shuffle=False, 
+                                    num_workers=self.hparams.num_workers, 
+                                    pin_memory=True
+                                    )
         return validation_dataloader
     
