@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import utils
 import warnings
 import pandas as pd
-import model
+from model import UrbanSound8KModel
 import lightning_module
 import lightning_data_module
 from pytorch_lightning import Trainer
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         dm = lightning_data_module.UrbanSound8KDataModule(batch_size=args.bs, num_workers=args.workers, transforms_params=transforms_params, validation_fold=i, signal_augmentation=False, feature_augmentation=True)
 
         # Instantiation of the model
-        model = model.UrbanSound8KModel(input_height=input_height, input_width=input_width, output_neurons=10)
+        model = UrbanSound8KModel(input_height=input_height, input_width=input_width, output_neurons=10)
 
         # Instantiation of the lightning module
         lm = lightning_module.UrbanSound8KModule(n_classes=n_classes, classes_map=classes_map, learning_rate=args.lr, batch_size=args.bs, model=model) 
