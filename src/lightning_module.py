@@ -23,7 +23,7 @@ class UrbanSound8KModule(pl.LightningModule):
 
     def configure_optimizers(self):  
         optimizer = Adam(self.parameters(), lr=self.hparams.learning_rate)
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=3)   
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)   
         return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
