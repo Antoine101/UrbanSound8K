@@ -1,5 +1,5 @@
 dataset
-lightning_logs
+logs
 checkpoints
 features
 figures
