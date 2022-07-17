@@ -36,7 +36,7 @@ class UrbanSound8KModule(pl.LightningModule):
         
     def training_step(self, train_batch, batch_idx): 
         index, audio_name, targets, inputs = train_batch
-        logits = self.model(inputs)
+        logits = self.model(inputs) 
         loss = F.cross_entropy(logits, targets)
         predictions = torch.argmax(logits, dim=1)
         self.train_accuracy(logits, targets)

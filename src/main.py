@@ -1,3 +1,4 @@
+from datetime import datetime
 from argparse import ArgumentParser
 import utils
 import warnings
@@ -23,8 +24,8 @@ if __name__ == "__main__":
     parser.add_argument("--devices", default="auto", help="Number of devices (GPUs or CPU cores) to use: integer starting from 1 or 'auto'")
     parser.add_argument("--workers", type=int, default=4, help="Number of CPU cores to use as as workers for the dataloarders: integer starting from 1 to maximum number of cores on this machine")
     parser.add_argument("--epochs", type=int, default=60, help="Maximum number of epochs to run for")
-    parser.add_argument("--bs", type=int, default=64, help="Batch size")
-    parser.add_argument("--lr", type=float, default=0.1, help="Initial learning rate")
+    parser.add_argument("--bs", type=int, default=128, help="Batch size")
+    parser.add_argument("--lr", type=float, default=2e-4, help="Initial learning rate")
     args = parser.parse_args()
 
     # Printing of the selected arguments summary and adju
@@ -65,7 +66,14 @@ if __name__ == "__main__":
         print(f"========== Cross-validation {i} on {10} ==========")
 
         # Instiation of the lightning data module
-        dm = lightning_data_module.UrbanSound8KDataModule(batch_size=args.bs, num_workers=args.workers, transforms_params=transforms_params, validation_fold=i, signal_augmentation=False, feature_augmentation=True)
+        dm = lightning_data_module.UrbanSound8KDataModule(
+                                                            batch_size=args.bs, 
+                                                            num_workers=args.workers, 
+                                                            transforms_params=transforms_params, 
+                                                            validation_fold=i, 
+                                                            signal_augmentation=False, 
+                                                            feature_augmentation=True
+                                                            )
 
         # Instantiation of the model
         model = UrbanSound8KModel(input_height=input_height, input_width=input_width, output_neurons=10)
@@ -74,14 +82,16 @@ if __name__ == "__main__":
         lm = lightning_module.UrbanSound8KModule(n_classes=n_classes, classes_map=classes_map, learning_rate=args.lr, batch_size=args.bs, model=model) 
 
         # Instantiation of the logger
-        tensorboard_logger = TensorBoardLogger(save_dir=".")
+        timestamp = datetime.today().strftime("%Y-%m-%d - %Hh%Mm%Ss")
+        tensorboard_logger = TensorBoardLogger(save_dir=".", name="logs", version=f"{timestamp} - Validation on fold {i}")
 
         # Instantiation of the early stopping callback
         early_stopping = EarlyStopping(
                                         monitor = "validation_loss",
                                         min_delta = 0.01,
-                                        patience=20, 
-                                        verbose=True
+                                        patience=6, 
+                                        verbose=True,
+                                        mode="min"
                                         )
 
         # Instantiation of the learning rate monitor callback
