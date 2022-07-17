@@ -24,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument("--devices", default="auto", help="Number of devices (GPUs or CPU cores) to use: integer starting from 1 or 'auto'")
     parser.add_argument("--workers", type=int, default=4, help="Number of CPU cores to use as as workers for the dataloarders: integer starting from 1 to maximum number of cores on this machine")
     parser.add_argument("--epochs", type=int, default=60, help="Maximum number of epochs to run for")
-    parser.add_argument("--bs", type=int, default=128, help="Batch size")
+    parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--lr", type=float, default=2e-4, help="Initial learning rate")
     args = parser.parse_args()
 
