@@ -1,4 +1,5 @@
 import os
+import math
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -159,8 +160,12 @@ class UrbanSound8KDataset(Dataset):
 
 
     def _feature_augmentation(self, feature):
-        frequency_masking = transforms.FrequencyMasking(freq_mask_param=50)
-        time_masking = transforms.TimeMasking(time_mask_param=50, p=1.0)
+        feature_height = feature.size(dim=0)
+        feature_width = feature.size(dim=1)
+        freq_mask_len = math.ceil(0.1*feature_height)
+        time_mask_len = math.ceil(0.1*feature_width)
+        frequency_masking = transforms.FrequencyMasking(freq_mask_param=freq_mask_len)
+        time_masking = transforms.TimeMasking(time_mask_param=time_mask_len, p=1.0)
         feature = frequency_masking(feature)
         feature = time_masking(feature)
         return feature
