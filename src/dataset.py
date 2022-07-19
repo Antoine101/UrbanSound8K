@@ -160,8 +160,8 @@ class UrbanSound8KDataset(Dataset):
 
 
     def _feature_augmentation(self, feature):
-        feature_height = feature.size(dim=0)
-        feature_width = feature.size(dim=1)
+        feature_height = feature.size(dim=1)
+        feature_width = feature.size(dim=2)
         freq_mask_len = math.ceil(0.1*feature_height)
         time_mask_len = math.ceil(0.1*feature_width)
         frequency_masking = transforms.FrequencyMasking(freq_mask_param=freq_mask_len)
