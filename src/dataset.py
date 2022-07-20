@@ -6,11 +6,12 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 import torchaudio
 import torchaudio.transforms as transforms
+from torch_audiomentations import Compose, Gain, PitchShift, Shift
 
 
 class UrbanSound8KDataset(Dataset):
     
-    def __init__(self, dataset_path, validation_fold, feature_name, preprocessing_parameters, train, signal_augmentation, feature_augmentation):
+    def __init__(self, dataset_path, validation_fold, feature_name, feature_processing_parameters, train, signal_augmentation, feature_augmentation, augmentation_parameters):
         self.dataset_path = dataset_path
         metadata = pd.read_csv(os.path.join(dataset_path, "UrbanSound8K.csv"))
         if train:
@@ -21,7 +22,8 @@ class UrbanSound8KDataset(Dataset):
         self.signal_augmentation = signal_augmentation
         self.feature_augmentation = feature_augmentation
         self.feature_name = feature_name
-        self.parameters = preprocessing_parameters
+        self.feature_processing_parameters = feature_processing_parameters
+        self.augmentation_parameters = augmentation_parameters
         
 
     def __len__(self):
@@ -100,6 +102,33 @@ class UrbanSound8KDataset(Dataset):
 
     
     def _signal_augmentation(self, signal):
+        signal = signal.unsqueeze(0)
+        signal_transforms = Compose([
+                                    Gain(
+                                        min_gain_in_db=self.hparams.augmentation_parameters["min_gain_in_db"], 
+                                        max_gain_in_db=self.hparams.augmentation_parameters["max_gain_in_db"], 
+                                        p=self.hparams.augmentation_parameters["p_gain"]
+                                        ),
+                                    PitchShift(
+                                        min_transpose_semitones=self.hparams.augmentation_parameters["min_transpose_semitones"], 
+                                        max_transpose_semitones=self.hparams.augmentation_parameters["max_transpose_semitones"], 
+                                        p=self.hparams.augmentation_parameters["p_pitch_shift"], 
+                                        sample_rate=self.parameters["target_sample_rate"], 
+                                        target_rate=self.parameters["target_sample_rate"]
+                                        ),
+                                    Shift(
+                                        min_shift=self.hparams.augmentation_parameters["min_shift"], 
+                                        max_shift=self.hparams.augmentation_parameters["max_shift"], 
+                                        p=self.hparams.augmentation_parameters["p_shift"], 
+                                        sample_rate=self.parameters["target_sample_rate"], 
+                                        target_rate=self.parameters["target_sample_rate"]
+                                        )
+                                    ], 
+                                    p=self.hparams.augmentation_parameters["p_compose"], 
+                                    shuffle=False
+                                    )
+        signal = signal_transforms(samples=signal, sample_rate=self.parameters["target_sample_rate"])
+        signal = signal.squeeze(0)
         return signal
 
     

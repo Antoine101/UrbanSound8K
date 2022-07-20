@@ -37,7 +37,7 @@ if __name__ == "__main__":
     n_classes = len(metadata["class"].unique())
     classes_map = pd.Series(metadata["class"].values, index=metadata["classID"]).sort_index().to_dict()
 
-    # Audio pre-processing parameters
+    # Feature processing parameters
     target_sample_rate = 22050
     target_length = 4
     n_samples = target_length * target_sample_rate
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     hop_denominator = 2
     n_mels = 64
     n_mfcc = 40
-    transforms_params = {
+    feature_processing_parameters = {
         "target_sample_rate": target_sample_rate,
         "target_length": target_length,
         "n_samples": n_samples,
@@ -53,6 +53,23 @@ if __name__ == "__main__":
         "hop_denominator": hop_denominator,
         "n_mels": n_mels,
         "n_mfcc": n_mfcc
+    }
+
+    # Data augmentation parameters
+    augmentation_parameters = {
+        "min_gain_in_db":-15.0,
+        "max_gain_in_db":50.0,
+        "p_gain":1.0,
+        "min_transpose_semitones":-4,
+        "max_transpose_semitones":4,
+        "p_pitch_shift":1.0,
+        "min_shift":-0.5,
+        "max_shift":0.5,
+        "p_shift":1.0,
+        "p_compose": 1.0,
+        "percentage_freq_mask_len": 0.1,
+        "percentage_time_mask_len": 0.1,
+        "p_time_masking": 1.0
     }
 
     # Calculation of the input height and width to pass to the model for adjustment of fc1 in_features
@@ -69,10 +86,11 @@ if __name__ == "__main__":
         dm = lightning_data_module.UrbanSound8KDataModule(
                                                             batch_size=args.bs, 
                                                             num_workers=args.workers, 
-                                                            transforms_params=transforms_params, 
+                                                            feature_processing_parameters=feature_processing_parameters, 
                                                             validation_fold=i, 
                                                             signal_augmentation=False, 
-                                                            feature_augmentation=True
+                                                            feature_augmentation=True,
+                                                            augmentation_parameters=augmentation_parameters
                                                             )
 
         # Instantiation of the model
