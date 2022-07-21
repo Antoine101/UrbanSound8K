@@ -59,7 +59,6 @@ class UrbanSound8KModule(pl.LightningModule):
             ax.imshow(torch.squeeze(input_sample).cpu(), cmap="viridis", origin="lower", aspect="auto")
             ax.set_title(f"Class: {input_sample_class}")
             ax.set_xlabel("Time Frames")
-            ax.set_ylabel("Mel Bands")
             self.logger.experiment.add_figure(f"Training sample input", fig)
             input_sample = torch.unsqueeze(input_sample, 3)
             input_sample = torch.permute(input_sample, (3,0,1,2))
@@ -76,6 +75,7 @@ class UrbanSound8KModule(pl.LightningModule):
         self.validation_accuracy(predictions, targets)
         self.validation_confmat.update(predictions, targets)
         # Log the loss and the accuracy
+        self.log("hp_metric", loss)
         self.log("validation_loss", loss, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
         self.log("validation_accuracy", self.validation_accuracy, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
         return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss, "audio_name":audio_name}

@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 
 class UrbanSound8KDataModule(pl.LightningDataModule):
 
-    def __init__(self, batch_size, num_workers, feature_processing_parameters, validation_fold, signal_augmentation, feature_augmentation, augmentation_parameters):
+    def __init__(self, batch_size, num_workers, feature_name, feature_processing_parameters, validation_fold, signal_augmentation, feature_augmentation, augmentation_parameters):
         super().__init__()
         self.save_hyperparameters()
         self.prepare_data_per_node = True
@@ -20,21 +20,23 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
             self.train_ds = UrbanSound8KDataset(
                                                 dataset_path="dataset", 
                                                 validation_fold=self.hparams.validation_fold, 
-                                                feature_name="mel-spectrogram", 
-                                                feature_preprocessing_parameters=self.hparams.feature_processing_parameters, 
+                                                feature_name=self.hparams.feature_name, 
+                                                feature_processing_parameters=self.hparams.feature_processing_parameters, 
                                                 train=True,
                                                 signal_augmentation=self.hparams.signal_augmentation,
                                                 feature_augmentation=self.hparams.feature_augmentation,
                                                 augmentation_parameters=self.hparams.augmentation_parameters
                                                 )
+                                                
             self.validation_ds = UrbanSound8KDataset(
                                                 dataset_path="dataset", 
                                                 validation_fold=self.hparams.validation_fold, 
-                                                feature_name="mel-spectrogram", 
-                                                feature_preprocessing_parameters=self.hparams.feature_processing_parameters, 
+                                                feature_name=self.hparams.feature_name, 
+                                                feature_processing_parameters=self.hparams.feature_processing_parameters, 
                                                 train=False,
                                                 signal_augmentation=self.hparams.signal_augmentation,
-                                                feature_augmentation=self.hparams.feature_augmentation
+                                                feature_augmentation=self.hparams.feature_augmentation,
+                                                augmentation_parameters=self.hparams.augmentation_parameters
                                                 )
 
 

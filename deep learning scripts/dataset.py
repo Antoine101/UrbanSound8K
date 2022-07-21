@@ -80,22 +80,22 @@ class UrbanSound8KDataset(Dataset):
         
 
     def _resample_if_necessary(self, signal, sr):
-        if sr != self.parameters["target_sample_rate"]:
-            resample_transform = transforms.Resample(sr, self.parameters["target_sample_rate"])
+        if sr != self.feature_processing_parameters["target_sample_rate"]:
+            resample_transform = transforms.Resample(sr, self.feature_processing_parameters["target_sample_rate"])
             signal = resample_transform(signal)
         return signal
 
     
     def _cut_if_necessary(self, signal):
-        if signal.shape[1] > self.parameters["n_samples"]:
-            signal = signal[:, :self.parameters["n_samples"]]
+        if signal.shape[1] > self.feature_processing_parameters["n_samples"]:
+            signal = signal[:, :self.feature_processing_parameters["n_samples"]]
         return signal
 
         
     def _right_pad_if_necessary(self, signal):
         signal_length = signal.shape[1]
-        if signal_length < self.parameters["n_samples"]:
-            num_missing_samples = self.parameters["n_samples"] - signal_length
+        if signal_length < self.feature_processing_parameters["n_samples"]:
+            num_missing_samples = self.feature_processing_parameters["n_samples"] - signal_length
             last_dim_padding = (0, num_missing_samples)
             signal = nn.functional.pad(signal, last_dim_padding)
         return signal
@@ -113,30 +113,30 @@ class UrbanSound8KDataset(Dataset):
                                         min_transpose_semitones=self.hparams.augmentation_parameters["min_transpose_semitones"], 
                                         max_transpose_semitones=self.hparams.augmentation_parameters["max_transpose_semitones"], 
                                         p=self.hparams.augmentation_parameters["p_pitch_shift"], 
-                                        sample_rate=self.parameters["target_sample_rate"], 
-                                        target_rate=self.parameters["target_sample_rate"]
+                                        sample_rate=self.feature_processing_parameters["target_sample_rate"], 
+                                        target_rate=self.feature_processing_parameters["target_sample_rate"]
                                         ),
                                     Shift(
                                         min_shift=self.hparams.augmentation_parameters["min_shift"], 
                                         max_shift=self.hparams.augmentation_parameters["max_shift"], 
                                         p=self.hparams.augmentation_parameters["p_shift"], 
-                                        sample_rate=self.parameters["target_sample_rate"], 
-                                        target_rate=self.parameters["target_sample_rate"]
+                                        sample_rate=self.feature_processing_parameters["target_sample_rate"], 
+                                        target_rate=self.feature_processing_parameters["target_sample_rate"]
                                         )
                                     ], 
                                     p=self.hparams.augmentation_parameters["p_compose"], 
                                     shuffle=False
                                     )
-        signal = signal_transforms(samples=signal, sample_rate=self.parameters["target_sample_rate"])
+        signal = signal_transforms(samples=signal, sample_rate=self.feature_processing_parameters["target_sample_rate"])
         signal = signal.squeeze(0)
         return signal
 
     
     def _spectrogram_transform(self, signal):
         spectrogram_transform = transforms.Spectrogram(
-                                                        n_fft = self.parameters["n_fft"],
-                                                        win_length = self.parameters["n_fft"],
-                                                        hop_length = self.parameters["n_fft"] // self.parameters["hop_denominator"],
+                                                        n_fft = self.feature_processing_parameters["n_fft"],
+                                                        win_length = self.feature_processing_parameters["n_fft"],
+                                                        hop_length = self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"],
                                                         pad = 0,
                                                         window_fn = torch.hann_window,
                                                         power = 2,
@@ -153,9 +153,9 @@ class UrbanSound8KDataset(Dataset):
     
     def _mel_spectrogram_transform(self, signal):
         mel_spectrogram_transform = transforms.MelSpectrogram(
-                                                        sample_rate = self.parameters["target_sample_rate"],
-                                                        n_fft = self.parameters["n_fft"],
-                                                        n_mels = self.parameters["n_mels"],
+                                                        sample_rate = self.feature_processing_parameters["target_sample_rate"],
+                                                        n_fft = self.feature_processing_parameters["n_fft"],
+                                                        n_mels = self.feature_processing_parameters["n_mels"],
                                                         window_fn = torch.hann_window,
                                                         power = 2,
                                                         normalized = True,
@@ -172,8 +172,8 @@ class UrbanSound8KDataset(Dataset):
 
     def _mfcc_transform(self, signal):
         mfcc_transform = transforms.MFCC(
-                                        sample_rate = self.parameters["target_sample_rate"],
-                                        n_mfcc = self.parameters["n_mfcc"],
+                                        sample_rate = self.feature_processing_parameters["target_sample_rate"],
+                                        n_mfcc = self.feature_processing_parameters["n_mfcc"],
                                         dct_type = 2,
                                         norm = "ortho",
                                         log_mels = False 

@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--accelerator", default="auto", help="Type of accelerator: 'gpu', 'cpu', 'auto'")
     parser.add_argument("--devices", default="auto", help="Number of devices (GPUs or CPU cores) to use: integer starting from 1 or 'auto'")
     parser.add_argument("--workers", type=int, default=4, help="Number of CPU cores to use as as workers for the dataloarders: integer starting from 1 to maximum number of cores on this machine")
-    parser.add_argument("--epochs", type=int, default=60, help="Maximum number of epochs to run for")
+    parser.add_argument("--epochs", type=int, default=5, help="Maximum number of epochs to run for")
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--lr", type=float, default=2e-4, help="Initial learning rate")
     args = parser.parse_args()
@@ -54,6 +54,9 @@ if __name__ == "__main__":
         "n_mels": n_mels,
         "n_mfcc": n_mfcc
     }
+
+    # Feature selection ("spectrogram", "mel-spectrogram" or "mfcc")
+    feature_name = "mel-spectrogram"
 
     # Data augmentation parameters
     augmentation_parameters = {
@@ -88,10 +91,11 @@ if __name__ == "__main__":
                                                             num_workers=args.workers, 
                                                             feature_processing_parameters=feature_processing_parameters, 
                                                             validation_fold=i, 
+                                                            feature_name = feature_name,
                                                             signal_augmentation=False, 
                                                             feature_augmentation=True,
                                                             augmentation_parameters=augmentation_parameters
-                                                            )
+                                                        )
 
         # Instantiation of the model
         model = UrbanSound8KModel(input_height=input_height, input_width=input_width, output_neurons=10)
@@ -101,7 +105,13 @@ if __name__ == "__main__":
 
         # Instantiation of the logger
         timestamp = datetime.today().strftime("%Y-%m-%d - %Hh%Mm%Ss")
-        tensorboard_logger = TensorBoardLogger(save_dir=".", name="logs", version=f"{timestamp} - Validation on fold {i}")
+        tensorboard_logger = TensorBoardLogger(
+                                                save_dir=".", 
+                                                name="logs", 
+                                                version=f"{timestamp} - Validation on fold {i}",
+                                                log_graph=True,
+                                                default_hp_metric=True,
+                                                )
 
         # Instantiation of the early stopping callback
         early_stopping = EarlyStopping(
