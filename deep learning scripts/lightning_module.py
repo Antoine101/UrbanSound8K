@@ -40,8 +40,8 @@ class UrbanSound8KModule(pl.LightningModule):
         loss = F.cross_entropy(logits, targets)
         predictions = torch.argmax(logits, dim=1)
         self.train_accuracy(logits, targets)
-        self.log("training_loss", loss, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
-        self.log("training_accuracy", self.train_accuracy, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)        
+        self.log("training_loss", loss, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("training_accuracy", self.train_accuracy, on_epoch=True, batch_size=self.hparams.batch_size)        
         return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss}
     
     
@@ -62,7 +62,7 @@ class UrbanSound8KModule(pl.LightningModule):
             self.logger.experiment.add_figure(f"Training sample input", fig)
             input_sample = torch.unsqueeze(input_sample, 3)
             input_sample = torch.permute(input_sample, (3,0,1,2))
-            self.logger.log_graph(self, input_sample)
+            self.logger.experiment.add_graph(self.model, input_sample)
 
             
     def validation_step(self, validation_batch, batch_idx):
@@ -75,9 +75,9 @@ class UrbanSound8KModule(pl.LightningModule):
         self.validation_accuracy(predictions, targets)
         self.validation_confmat.update(predictions, targets)
         # Log the loss and the accuracy
-        self.log("hp_metric", loss)
-        self.log("validation_loss", loss, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
-        self.log("validation_accuracy", self.validation_accuracy, on_step=True, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("hp_metric", loss, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("validation_loss", loss, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("validation_accuracy", self.validation_accuracy, on_epoch=True, batch_size=self.hparams.batch_size)
         return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss, "audio_name":audio_name}
     
     
