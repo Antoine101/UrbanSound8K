@@ -4,10 +4,11 @@ from torch.utils.data import DataLoader
 
 class UrbanSound8KDataModule(pl.LightningDataModule):
 
-    def __init__(self, batch_size, num_workers, feature_name, feature_processing_parameters, validation_fold, signal_augmentation, feature_augmentation, augmentation_parameters):
+    def __init__(self, dataset_path, batch_size, num_workers, feature_name, feature_processing_parameters, validation_fold, signal_augmentation, feature_augmentation, augmentation_parameters):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["dataset_path"])
         self.prepare_data_per_node = True
+        self.dataset_path
 
 
     def prepare_data(self) -> None:
@@ -18,7 +19,7 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
 
         if stage == "fit" or stage is None:
             self.train_ds = UrbanSound8KDataset(
-                                                dataset_path="dataset", 
+                                                dataset_path=self.dataset_path, 
                                                 validation_fold=self.hparams.validation_fold, 
                                                 feature_name=self.hparams.feature_name, 
                                                 feature_processing_parameters=self.hparams.feature_processing_parameters, 
@@ -29,13 +30,13 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
                                                 )
                                                 
             self.validation_ds = UrbanSound8KDataset(
-                                                dataset_path="dataset", 
+                                                dataset_path=self.dataset_path, 
                                                 validation_fold=self.hparams.validation_fold, 
                                                 feature_name=self.hparams.feature_name, 
                                                 feature_processing_parameters=self.hparams.feature_processing_parameters, 
                                                 train=False,
-                                                signal_augmentation=self.hparams.signal_augmentation,
-                                                feature_augmentation=self.hparams.feature_augmentation,
+                                                signal_augmentation=False,
+                                                feature_augmentation=False,
                                                 augmentation_parameters=self.hparams.augmentation_parameters
                                                 )
 

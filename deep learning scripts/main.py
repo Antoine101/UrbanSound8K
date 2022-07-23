@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--accelerator", default="auto", help="Type of accelerator: 'gpu', 'cpu', 'auto'")
     parser.add_argument("--devices", default="auto", help="Number of devices (GPUs or CPU cores) to use: integer starting from 1 or 'auto'")
     parser.add_argument("--workers", type=int, default=4, help="Number of CPU cores to use as as workers for the dataloarders: integer starting from 1 to maximum number of cores on this machine")
-    parser.add_argument("--epochs", type=int, default=5, help="Maximum number of epochs to run for")
+    parser.add_argument("--epochs", type=int, default=60, help="Maximum number of epochs to run for")
     parser.add_argument("--bs", type=int, default=64, help="Batch size")
     parser.add_argument("--lr", type=float, default=2e-4, help="Initial learning rate")
     args = parser.parse_args()
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # stments if needed
     args = utils.args_interpreter(args)
 
-    # Loading of the dataset metadata to retrieve the number of classes on {label_id: label_name} mapping dictionnary
+    # Loading of the dataset metadata to retrieve the number of classes and the {label_id: label_name} mapping dictionnary
     metadata = pd.read_csv("dataset/UrbanSound8K.csv")
     n_classes = len(metadata["class"].unique())
     classes_map = pd.Series(metadata["class"].values, index=metadata["classID"]).sort_index().to_dict()
@@ -41,18 +41,14 @@ if __name__ == "__main__":
     target_sample_rate = 22050
     target_length = 4
     n_samples = target_length * target_sample_rate
-    n_fft = 512
-    hop_denominator = 2
-    n_mels = 64
-    n_mfcc = 40
     feature_processing_parameters = {
         "target_sample_rate": target_sample_rate,
         "target_length": target_length,
         "n_samples": n_samples,
-        "n_fft": n_fft,
-        "hop_denominator": hop_denominator,
-        "n_mels": n_mels,
-        "n_mfcc": n_mfcc
+        "n_fft": 512,
+        "hop_denominator": 2,
+        "n_mels": 64,
+        "n_mfcc": 40
     }
 
     # Feature selection ("spectrogram", "mel-spectrogram" or "mfcc")
@@ -80,6 +76,16 @@ if __name__ == "__main__":
     input_width = (n_samples + n_fft) // (n_fft - (n_fft // hop_denominator))
     print(f"Input dimensions: {input_height}x{input_width}")
 
+    # Optimizer selection
+    optimizer = "Adam"
+    optimizer_parameters = {}
+
+    # Learning rate scheduler selection
+    lr_scheduler = "ReduceLROnPlateau"
+    lr_scheduler_parameters = {
+        "patience": 3
+    }
+
     for i in range(1, 11):
         
         print("\n")
@@ -92,7 +98,7 @@ if __name__ == "__main__":
                                                             feature_processing_parameters=feature_processing_parameters, 
                                                             validation_fold=i, 
                                                             feature_name = feature_name,
-                                                            signal_augmentation=False, 
+                                                            signal_augmentation=True, 
                                                             feature_augmentation=True,
                                                             augmentation_parameters=augmentation_parameters
                                                         )
@@ -101,7 +107,17 @@ if __name__ == "__main__":
         model = UrbanSound8KModel(input_height=input_height, input_width=input_width, output_neurons=10)
 
         # Instantiation of the lightning module
-        lm = lightning_module.UrbanSound8KModule(n_classes=n_classes, classes_map=classes_map, learning_rate=args.lr, batch_size=args.bs, model=model) 
+        lm = lightning_module.UrbanSound8KModule(
+                                                    n_classes=n_classes, 
+                                                    classes_map=classes_map, 
+                                                    optimizer=optimizer,
+                                                    optimizer_parameters=optimizer_parameters,
+                                                    lr_scheduler=lr_scheduler,
+                                                    lr_scheduler_parameters=lr_scheduler_parameters,
+                                                    learning_rate=args.lr, 
+                                                    batch_size=args.bs, 
+                                                    model=model
+                                                ) 
 
         # Instantiation of the logger
         timestamp = datetime.today().strftime("%Y-%m-%d - %Hh%Mm%Ss")

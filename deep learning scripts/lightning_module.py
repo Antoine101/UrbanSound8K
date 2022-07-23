@@ -9,7 +9,7 @@ import seaborn as sns
 
 
 class UrbanSound8KModule(pl.LightningModule):
-    def __init__(self, n_classes, classes_map, learning_rate, batch_size, model):
+    def __init__(self, n_classes, classes_map, optimizer, optimizer_parameters, lr_scheduler, lr_scheduler_parameters, learning_rate, batch_size, model):
         super().__init__()
         # Save hyperparameters to the checkpoint
         self.save_hyperparameters(ignore=["model"])   
@@ -21,9 +21,13 @@ class UrbanSound8KModule(pl.LightningModule):
         self.validation_confmat = ConfusionMatrix(num_classes=self.hparams.n_classes)           
         
 
-    def configure_optimizers(self):  
-        optimizer = Adam(self.parameters(), lr=self.hparams.learning_rate)
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)   
+    def configure_optimizers(self): 
+        if self.hparams.optimizer == "Adam": 
+            optimizer = Adam(self.parameters(), lr=self.hparams.learning_rate)
+
+        if self.hparams.lr_scheduler == "ReduceLROnPlateau":
+            scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=self.hparams.lr_scheduler_parameters["patience"], verbose=True)  
+
         return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
@@ -40,8 +44,8 @@ class UrbanSound8KModule(pl.LightningModule):
         loss = F.cross_entropy(logits, targets)
         predictions = torch.argmax(logits, dim=1)
         self.train_accuracy(logits, targets)
-        self.log("training_loss", loss, on_epoch=True, batch_size=self.hparams.batch_size)
-        self.log("training_accuracy", self.train_accuracy, on_epoch=True, batch_size=self.hparams.batch_size)        
+        self.log("training_loss", loss, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("training_accuracy", self.train_accuracy, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)        
         return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss}
     
     
@@ -75,22 +79,13 @@ class UrbanSound8KModule(pl.LightningModule):
         self.validation_accuracy(predictions, targets)
         self.validation_confmat.update(predictions, targets)
         # Log the loss and the accuracy
-        self.log("hp_metric", loss, on_epoch=True, batch_size=self.hparams.batch_size)
-        self.log("validation_loss", loss, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("hp_metric", loss, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("validation_loss", loss, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
         self.log("validation_accuracy", self.validation_accuracy, on_epoch=True, batch_size=self.hparams.batch_size)
-        return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss, "audio_name":audio_name}
+        return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss}
     
     
     def validation_epoch_end(self, outputs):
-        # Concatenate the predictions of all batches
-        preds = torch.cat([output["predictions"] for output in outputs])
-        # Concatenate the targets of all batches
-        targets = torch.cat([output["targets"] for output in outputs])
-        # Concatenate the audios name of all batches
-        audio_name_tuples_list = [output["audio_name"] for output in outputs]
-        audio_name = [audio_name for audio_name_tuples in audio_name_tuples_list for audio_name in audio_name_tuples]
-        for i in range(len(preds)):
-            self.logger.experiment.add_text("Predictions on validation set", f"Audio: {audio_name[i]} - Class: {targets[i]} - Predicted: {preds[i]}")
         # Compute the confusion matrix, turn it into a DataFrame, generate the plot and log it
         cm = self.validation_confmat.compute()
         cm = cm.cpu()
