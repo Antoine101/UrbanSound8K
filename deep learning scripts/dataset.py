@@ -11,7 +11,7 @@ from torch_audiomentations import Compose, Gain, PitchShift, Shift
 
 class UrbanSound8KDataset(Dataset):
     
-    def __init__(self, dataset_path, metadata, train, validation_fold, feature_name, feature_processing_parameters, signal_augmentation, feature_augmentation, augmentation_parameters):
+    def __init__(self, dataset_path, train, validation_fold, feature_name, feature_processing_parameters, signal_augmentation, feature_augmentation, augmentation_parameters):
         self.dataset_path = dataset_path
         metadata = pd.read_csv(os.path.join(dataset_path, "UrbanSound8K.csv"))
         if train:

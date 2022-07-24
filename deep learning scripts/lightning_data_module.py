@@ -8,7 +8,7 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
         super().__init__()
         self.save_hyperparameters(ignore=["dataset_path"])
         self.prepare_data_per_node = True
-        self.dataset_path
+        self.dataset_path = dataset_path
 
 
     def prepare_data(self) -> None:

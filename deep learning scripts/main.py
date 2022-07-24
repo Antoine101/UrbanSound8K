@@ -72,9 +72,7 @@ if __name__ == "__main__":
     }
 
     # Calculation of the input height and width to pass to the model for adjustment of fc1 in_features
-    input_height = n_mels
-    input_width = (n_samples + n_fft) // (n_fft - (n_fft // hop_denominator))
-    print(f"Input dimensions: {input_height}x{input_width}")
+    input_height, input_width = utils.calculate_input_shape(feature_name, feature_processing_parameters)
 
     # Optimizer selection
     optimizer = "Adam"
@@ -93,6 +91,7 @@ if __name__ == "__main__":
 
         # Instiation of the lightning data module
         dm = lightning_data_module.UrbanSound8KDataModule(
+                                                            dataset_path="dataset",
                                                             batch_size=args.bs, 
                                                             num_workers=args.workers, 
                                                             feature_processing_parameters=feature_processing_parameters, 
