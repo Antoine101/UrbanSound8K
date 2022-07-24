@@ -107,15 +107,15 @@ if __name__ == "__main__":
 
         # Instantiation of the lightning module
         lm = lightning_module.UrbanSound8KModule(
-                                                    n_classes=n_classes, 
-                                                    classes_map=classes_map, 
-                                                    optimizer=optimizer,
-                                                    optimizer_parameters=optimizer_parameters,
-                                                    lr_scheduler=lr_scheduler,
-                                                    lr_scheduler_parameters=lr_scheduler_parameters,
-                                                    learning_rate=args.lr, 
-                                                    batch_size=args.bs, 
-                                                    model=model
+                                                n_classes=n_classes, 
+                                                classes_map=classes_map, 
+                                                optimizer=optimizer,
+                                                optimizer_parameters=optimizer_parameters,
+                                                lr_scheduler=lr_scheduler,
+                                                lr_scheduler_parameters=lr_scheduler_parameters,
+                                                learning_rate=args.lr, 
+                                                batch_size=args.bs, 
+                                                model=model
                                                 ) 
 
         # Instantiation of the logger
