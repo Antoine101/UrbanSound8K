@@ -51,11 +51,16 @@ def args_interpreter(args):
 
     return args
 
+
 def calculate_input_shape(feature_name, feature_processing_parameters):
-    if feature_name == "mel-spectrogram":
+    if feature_name == "spectrogram":
+        input_height = (feature_processing_parameters["n_fft"] // 2) + 1
+        input_width = (feature_processing_parameters["n_samples"]) // (feature_processing_parameters["n_fft"] - (feature_processing_parameters["n_fft"] // feature_processing_parameters["hop_denominator"])) - 1
+    elif feature_name == "mel-spectrogram":
         input_height = feature_processing_parameters["n_mels"]
+        input_width = (feature_processing_parameters["n_samples"] + feature_processing_parameters["n_fft"]) // (feature_processing_parameters["n_fft"] - (feature_processing_parameters["n_fft"] // feature_processing_parameters["hop_denominator"]))
     elif feature_name == "mfcc":
         input_height = feature_processing_parameters["n_mfcc"]
-    input_width = (feature_processing_parameters["n_samples"] + feature_processing_parameters["n_fft"]) // (feature_processing_parameters["n_fft"] - (feature_processing_parameters["n_fft"] // feature_processing_parameters["hop_denominator"]))
+        input_width = (feature_processing_parameters["n_samples"] + feature_processing_parameters["n_fft"]) // (feature_processing_parameters["n_fft"] - (feature_processing_parameters["n_fft"] // feature_processing_parameters["hop_denominator"]))
     print(f"Input dimensions: {input_height}x{input_width}")
     return input_height, input_width

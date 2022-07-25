@@ -37,6 +37,9 @@ if __name__ == "__main__":
     n_classes = len(metadata["class"].unique())
     classes_map = pd.Series(metadata["class"].values, index=metadata["classID"]).sort_index().to_dict()
 
+    # Feature selection ("spectrogram", "mel-spectrogram" or "mfcc")
+    feature_name = "mel-spectrogram"
+
     # Feature processing parameters
     target_sample_rate = 22050
     target_length = 4
@@ -45,22 +48,26 @@ if __name__ == "__main__":
         "target_sample_rate": target_sample_rate,
         "target_length": target_length,
         "n_samples": n_samples,
-        "n_fft": 512,
+        "n_fft": 1024,
         "hop_denominator": 2,
-        "n_mels": 64,
+        "n_mels": 128,
         "n_mfcc": 40
     }
 
-    # Feature selection ("spectrogram", "mel-spectrogram" or "mfcc")
-    feature_name = "mel-spectrogram"
+    # Calculation of the input height and width to pass to the model for adjustment of fc1 in_features
+    input_height, input_width = utils.calculate_input_shape(feature_name, feature_processing_parameters)
+
+    # Augmentation
+    signal_augmentation = False
+    feature_augmentation = True
 
     # Data augmentation parameters
     augmentation_parameters = {
         "min_gain_in_db":-15.0,
         "max_gain_in_db":50.0,
         "p_gain":1.0,
-        "min_transpose_semitones":-4,
-        "max_transpose_semitones":4,
+        "min_transpose_semitones":-2,
+        "max_transpose_semitones":2,
         "p_pitch_shift":1.0,
         "min_shift":-0.5,
         "max_shift":0.5,
@@ -71,9 +78,6 @@ if __name__ == "__main__":
         "p_time_masking": 1.0
     }
 
-    # Calculation of the input height and width to pass to the model for adjustment of fc1 in_features
-    input_height, input_width = utils.calculate_input_shape(feature_name, feature_processing_parameters)
-
     # Optimizer selection
     optimizer = "Adam"
     optimizer_parameters = {}
@@ -83,6 +87,7 @@ if __name__ == "__main__":
     lr_scheduler_parameters = {
         "patience": 3
     }
+
 
     for i in range(1, 11):
         
@@ -97,8 +102,8 @@ if __name__ == "__main__":
                                                             feature_processing_parameters=feature_processing_parameters, 
                                                             validation_fold=i, 
                                                             feature_name = feature_name,
-                                                            signal_augmentation=True, 
-                                                            feature_augmentation=True,
+                                                            signal_augmentation = signal_augmentation, 
+                                                            feature_augmentation = feature_augmentation,
                                                             augmentation_parameters=augmentation_parameters
                                                         )
 

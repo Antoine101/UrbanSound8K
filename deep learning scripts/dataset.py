@@ -143,8 +143,7 @@ class UrbanSound8KDataset(Dataset):
                                                         wkwargs = None,
                                                         center = False,
                                                         pad_mode = "reflect",
-                                                        onesided = True,
-                                                        return_complex = False
+                                                        onesided = True
                                                         )  
         spectrogram = spectrogram_transform(signal)
         return spectrogram
@@ -154,6 +153,11 @@ class UrbanSound8KDataset(Dataset):
         mel_spectrogram_transform = transforms.MelSpectrogram(
                                                         sample_rate = self.feature_processing_parameters["target_sample_rate"],
                                                         n_fft = self.feature_processing_parameters["n_fft"],
+                                                        win_length = self.feature_processing_parameters["n_fft"],
+                                                        hop_length = self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"],
+                                                        f_min = 0,
+                                                        f_max = None,
+                                                        pad = 0,
                                                         n_mels = self.feature_processing_parameters["n_mels"],
                                                         window_fn = torch.hann_window,
                                                         power = 2,

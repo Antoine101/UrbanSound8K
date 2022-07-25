@@ -12,7 +12,9 @@ class UrbanSound8KModel(nn.Module):
         self.conv2_dropout = nn.Dropout2d(p=0.3)
         self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(in_features=self.count_neurons(image_dim=(input_height, input_width)), out_features=512)
+        self.fc1_dropout = nn.Dropout(p=0.3)
         self.fc2 = nn.Linear(in_features=512, out_features=256)
+        self.fc2_dropout = nn.Dropout(p=0.3)
         self.fc3 = nn.Linear(in_features=256, out_features=output_neurons)
 
     def count_neurons(self, image_dim):
@@ -26,7 +28,7 @@ class UrbanSound8KModel(nn.Module):
         x = F.relu(F.max_pool2d(self.conv1(x), kernel_size=2))
         x = self.conv2_dropout(F.relu(F.max_pool2d(self.conv2(x), kernel_size=2)))
         x = self.flatten(x)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = self.fc1_dropout(F.relu(self.fc1(x)))
+        x = self.fc2_dropout(F.relu(self.fc2(x)))
         logits = self.fc3(x)
         return logits 
