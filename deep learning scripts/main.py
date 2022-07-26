@@ -64,17 +64,17 @@ if __name__ == "__main__":
     # Data augmentation parameters
     augmentation_parameters = {
         "min_gain_in_db":-15.0,
-        "max_gain_in_db":50.0,
+        "max_gain_in_db":15.0,
         "p_gain":1.0,
-        "min_transpose_semitones":-2,
-        "max_transpose_semitones":2,
+        "min_transpose_semitones":-1,
+        "max_transpose_semitones":1,
         "p_pitch_shift":1.0,
-        "min_shift":-0.5,
-        "max_shift":0.5,
+        "min_shift":-0.25,
+        "max_shift":0.25,
         "p_shift":1.0,
         "p_compose": 1.0,
-        "percentage_freq_mask_len": 0.1,
-        "percentage_time_mask_len": 0.1,
+        "percentage_freq_mask_len": 0.15,
+        "percentage_time_mask_len": 0.15,
         "p_time_masking": 1.0
     }
 

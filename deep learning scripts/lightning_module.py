@@ -3,7 +3,7 @@ import torch
 import pytorch_lightning as pl
 from torch.nn import functional as F
 from torch.optim import Adam, lr_scheduler
-from torchmetrics import Accuracy, ConfusionMatrix
+from torchmetrics import Accuracy, Precision, Recall, F1Score, ConfusionMatrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -18,7 +18,10 @@ class UrbanSound8KModule(pl.LightningModule):
         # Instantiation of the metrics
         self.train_accuracy = Accuracy(num_classes=self.hparams.n_classes, average="weighted")
         self.validation_accuracy = Accuracy(num_classes=self.hparams.n_classes, average="weighted")
-        self.validation_confmat = ConfusionMatrix(num_classes=self.hparams.n_classes)           
+        self.validation_precision = Precision(num_classes=self.hparams.n_classes, average="weighted")
+        self.validation_recall = Recall(num_classes=self.hparams.n_classes, average="weighted")
+        self.validation_f1_score = F1Score(num_classes=self.hparams.n_classes, average="weighted")
+        self.validation_confmat = ConfusionMatrix(num_classes=self.hparams.n_classes, normalize="true")           
         
 
     def configure_optimizers(self): 
@@ -70,18 +73,21 @@ class UrbanSound8KModule(pl.LightningModule):
 
             
     def validation_step(self, validation_batch, batch_idx):
-        # Unpack the validation batch
         index, audio_name, targets, inputs = validation_batch
-        # Pass the inputs to the model to get the logits
         logits = self.model(inputs)
         loss = F.cross_entropy(logits, targets)
         predictions = torch.argmax(logits, dim=1)
         self.validation_accuracy(predictions, targets)
+        self.validation_precision(predictions, targets)
+        self.validation_recall(predictions, targets)
+        self.validation_f1_score(predictions, targets)
         self.validation_confmat.update(predictions, targets)
-        # Log the loss and the accuracy
         self.log("hp_metric", loss, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
         self.log("validation_loss", loss, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
-        self.log("validation_accuracy", self.validation_accuracy, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("validation_accuracy", self.validation_accuracy, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("validation_precision", self.validation_accuracy, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("validation_recall", self.validation_accuracy, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
+        self.log("validation_f1_score", self.validation_accuracy, on_step=False, on_epoch=True, batch_size=self.hparams.batch_size)
         return {"inputs":inputs, "targets":targets, "predictions":predictions, "loss":loss}
     
     
@@ -90,16 +96,9 @@ class UrbanSound8KModule(pl.LightningModule):
         cm = self.validation_confmat.compute()
         cm = cm.cpu()
         self.validation_confmat.reset()
-        for class_id in range(self.hparams.n_classes):
-                precision = cm[class_id, class_id] / torch.sum(cm[:,class_id])
-                precision = round(precision.item()*100,1)
-                self.log(f"validation_precision/{class_id}", precision)
-                recall = cm[class_id, class_id] / torch.sum(cm[class_id,:])
-                recall = round(recall.item()*100,1)
-                self.log(f"validation_recall/{class_id}", recall)
         df_cm = pd.DataFrame(cm.numpy(), index=range(self.hparams.n_classes), columns=range(self.hparams.n_classes))
         fig, ax = plt.subplots(figsize=(16,16))
-        sns.heatmap(data=df_cm, annot=True, cmap="Blues", ax=ax)
+        sns.heatmap(data=df_cm, annot=True, cmap="Blues", ax=ax, vmin=0, vmax=1)
         ax.set_xticklabels(labels=list(self.hparams.classes_map.values()))
         ax.set_yticklabels(labels=list(self.hparams.classes_map.values()))
         ax.tick_params(axis="y", labelrotation=0)
