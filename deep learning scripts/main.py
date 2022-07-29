@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     # Augmentation
     signal_augmentation = False
-    feature_augmentation = True
+    feature_augmentation = False
 
     # Data augmentation parameters
     augmentation_parameters = {
@@ -108,7 +108,7 @@ if __name__ == "__main__":
                                                         )
 
         # Instantiation of the model
-        model = UrbanSound8KModel(input_height=input_height, input_width=input_width, output_neurons=10)
+        model = UrbanSound8KModel(input_height=input_height, input_width=input_width)
 
         # Instantiation of the lightning module
         lm = lightning_module.UrbanSound8KModule(
@@ -139,7 +139,7 @@ if __name__ == "__main__":
                                         min_delta = 0.01,
                                         patience=6, 
                                         verbose=True,
-                                        mode="min"
+                                        mode="max"
                                         )
 
         # Instantiation of the learning rate monitor callback

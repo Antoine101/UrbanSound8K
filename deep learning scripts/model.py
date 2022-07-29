@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class UrbanSound8KModel(nn.Module):
-    def __init__(self, input_height, input_width, output_neurons) -> None:
+    def __init__(self, input_height, input_width) -> None:
         super().__init__()
         # Definition of the model
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=5, stride=1, padding=2)
@@ -15,7 +15,7 @@ class UrbanSound8KModel(nn.Module):
         self.fc1_dropout = nn.Dropout(p=0.3)
         self.fc2 = nn.Linear(in_features=512, out_features=256)
         self.fc2_dropout = nn.Dropout(p=0.3)
-        self.fc3 = nn.Linear(in_features=256, out_features=output_neurons)
+        self.fc3 = nn.Linear(in_features=256, out_features=10)
 
     def count_neurons(self, image_dim):
         x = torch.rand(1, 1, *image_dim)

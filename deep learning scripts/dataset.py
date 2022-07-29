@@ -52,7 +52,7 @@ class UrbanSound8KDataset(Dataset):
         elif self.feature_name == "mfcc":
             feature = self._mfcc_transform(signal)
             if self.feature_augmentation:
-                feature = self._feature_augmentation(feature)            
+                feature = self._feature_augmentation(feature)          
         return index, audio_name, class_id, feature
 
     
