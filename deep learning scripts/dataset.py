@@ -11,7 +11,7 @@ from torch_audiomentations import Compose, Gain, PitchShift, Shift
 
 class UrbanSound8KDataset(Dataset):
     
-    def __init__(self, dataset_path, train, validation_fold, feature_name, feature_processing_parameters, signal_augmentation, feature_augmentation, augmentation_parameters):
+    def __init__(self, dataset_path, train, validation_fold, feature_name, feature_processing_parameters, signal_augmentation, feature_augmentation, augmentation_parameters, to_gpus, devices):
         self.dataset_path = dataset_path
         metadata = pd.read_csv(os.path.join(dataset_path, "UrbanSound8K.csv"))
         if train:
@@ -23,6 +23,8 @@ class UrbanSound8KDataset(Dataset):
         self.feature_name = feature_name
         self.feature_processing_parameters = feature_processing_parameters
         self.augmentation_parameters = augmentation_parameters
+        self.to_gpus = to_gpus
+        self.devices = devices
         
 
     def __len__(self):
@@ -33,6 +35,8 @@ class UrbanSound8KDataset(Dataset):
         audio_name = self._get_event_audio_name(index)
         class_id = torch.tensor(self._get_event_class_id(index), dtype=torch.long)
         signal, sr = self._get_event_signal(index)
+        if self.to_gpus:
+            signal.to(self.devices)
         signal = self._mix_down_if_necessary(signal)
         signal = self._resample_if_necessary(signal, sr)
         signal = self._cut_if_necessary(signal)
@@ -52,7 +56,7 @@ class UrbanSound8KDataset(Dataset):
         elif self.feature_name == "mfcc":
             feature = self._mfcc_transform(signal)
             if self.feature_augmentation:
-                feature = self._feature_augmentation(feature)          
+                feature = self._feature_augmentation(feature)      
         return index, audio_name, class_id, feature
 
     
@@ -174,12 +178,20 @@ class UrbanSound8KDataset(Dataset):
 
 
     def _mfcc_transform(self, signal):
+
+        melkwargs = {
+            "n_fft": self.feature_processing_parameters["n_fft"],
+            "win_length": self.feature_processing_parameters["n_fft"],
+            "hop_length": self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"]
+        }
+
         mfcc_transform = transforms.MFCC(
                                         sample_rate = self.feature_processing_parameters["target_sample_rate"],
                                         n_mfcc = self.feature_processing_parameters["n_mfcc"],
                                         dct_type = 2,
                                         norm = "ortho",
-                                        log_mels = False 
+                                        log_mels = False,
+                                        melkwargs = melkwargs 
                                         )
         mfcc = mfcc_transform(signal)
         return mfcc

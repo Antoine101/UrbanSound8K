@@ -4,11 +4,12 @@ from torch.utils.data import DataLoader
 
 class UrbanSound8KDataModule(pl.LightningDataModule):
 
-    def __init__(self, dataset_path, batch_size, num_workers, feature_name, feature_processing_parameters, validation_fold, signal_augmentation, feature_augmentation, augmentation_parameters):
+    def __init__(self, dataset_path, batch_size, num_workers, feature_name, feature_processing_parameters, validation_fold, signal_augmentation, feature_augmentation, augmentation_parameters, to_gpus):
         super().__init__()
-        self.save_hyperparameters(ignore=["dataset_path"])
+        self.save_hyperparameters(ignore=["dataset_path", "to_gpu"])
         self.prepare_data_per_node = True
         self.dataset_path = dataset_path
+        self.to_gpus = to_gpus
 
 
     def prepare_data(self) -> None:
@@ -16,8 +17,9 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
     
 
     def setup(self, stage=None):
-
+        
         if stage == "fit" or stage is None:
+
             self.train_ds = UrbanSound8KDataset(
                                                 dataset_path=self.dataset_path, 
                                                 validation_fold=self.hparams.validation_fold, 
@@ -26,7 +28,9 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
                                                 train=True,
                                                 signal_augmentation=self.hparams.signal_augmentation,
                                                 feature_augmentation=self.hparams.feature_augmentation,
-                                                augmentation_parameters=self.hparams.augmentation_parameters
+                                                augmentation_parameters=self.hparams.augmentation_parameters,
+                                                to_gpus=self.to_gpus,
+                                                devices=self.trainer.strategy.root_device
                                                 )
                                                 
             self.validation_ds = UrbanSound8KDataset(
@@ -37,7 +41,9 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
                                                 train=False,
                                                 signal_augmentation=False,
                                                 feature_augmentation=False,
-                                                augmentation_parameters=self.hparams.augmentation_parameters
+                                                augmentation_parameters=self.hparams.augmentation_parameters,
+                                                to_gpus=self.to_gpus,
+                                                devices=self.trainer.strategy.root_device
                                                 )
 
 

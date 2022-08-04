@@ -38,7 +38,7 @@ if __name__ == "__main__":
     classes_map = pd.Series(metadata["class"].values, index=metadata["classID"]).sort_index().to_dict()
 
     # Feature selection ("spectrogram", "mel-spectrogram" or "mfcc")
-    feature_name = "mel-spectrogram"
+    feature_name = "mfcc"
 
     # Feature processing parameters
     target_sample_rate = 22050
@@ -65,13 +65,13 @@ if __name__ == "__main__":
     augmentation_parameters = {
         "min_gain_in_db":-15.0,
         "max_gain_in_db":15.0,
-        "p_gain":1.0,
+        "p_gain":0.5,
         "min_transpose_semitones":-1,
         "max_transpose_semitones":1,
-        "p_pitch_shift":1.0,
+        "p_pitch_shift":0.5,
         "min_shift":-0.25,
         "max_shift":0.25,
-        "p_shift":1.0,
+        "p_shift":0.5,
         "p_compose": 1.0,
         "percentage_freq_mask_len": 0.15,
         "percentage_time_mask_len": 0.15,
@@ -104,7 +104,8 @@ if __name__ == "__main__":
                                                             feature_name = feature_name,
                                                             signal_augmentation = signal_augmentation, 
                                                             feature_augmentation = feature_augmentation,
-                                                            augmentation_parameters=augmentation_parameters
+                                                            augmentation_parameters=augmentation_parameters,
+                                                            to_gpus=True
                                                         )
 
         # Instantiation of the model
@@ -139,7 +140,7 @@ if __name__ == "__main__":
                                         min_delta = 0.01,
                                         patience=6, 
                                         verbose=True,
-                                        mode="max"
+                                        mode="min"
                                         )
 
         # Instantiation of the learning rate monitor callback

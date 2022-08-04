@@ -61,6 +61,6 @@ def calculate_input_shape(feature_name, feature_processing_parameters):
         input_width = (feature_processing_parameters["n_samples"] + feature_processing_parameters["n_fft"]) // (feature_processing_parameters["n_fft"] - (feature_processing_parameters["n_fft"] // feature_processing_parameters["hop_denominator"]))
     elif feature_name == "mfcc":
         input_height = feature_processing_parameters["n_mfcc"]
-        input_width = (feature_processing_parameters["n_samples"] + feature_processing_parameters["n_fft"]) // (feature_processing_parameters["n_fft"] - (feature_processing_parameters["n_fft"] // feature_processing_parameters["hop_denominator"]))
+        input_width = (feature_processing_parameters["n_samples"] + feature_processing_parameters["n_fft"]) // (feature_processing_parameters["n_fft"] - (feature_processing_parameters["n_fft"] // feature_processing_parameters["hop_denominator"])) - 1
     print(f"Input dimensions: {input_height}x{input_width}")
     return input_height, input_width
