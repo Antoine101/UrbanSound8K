@@ -6,7 +6,7 @@ class UrbanSound8KDataModule(pl.LightningDataModule):
 
     def __init__(self, dataset_path, batch_size, num_workers, feature_name, feature_processing_parameters, validation_fold, signal_augmentation, feature_augmentation, augmentation_parameters, to_gpus):
         super().__init__()
-        self.save_hyperparameters(ignore=["dataset_path", "to_gpu"])
+        self.save_hyperparameters(ignore=["dataset_path", "to_gpus"])
         self.prepare_data_per_node = True
         self.dataset_path = dataset_path
         self.to_gpus = to_gpus

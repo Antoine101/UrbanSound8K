@@ -85,7 +85,9 @@ if __name__ == "__main__":
     # Learning rate scheduler selection
     lr_scheduler = "ReduceLROnPlateau"
     lr_scheduler_parameters = {
-        "patience": 3
+        "factor": 0.1,
+        "patience": 3,
+        "threshold": 1e-4
     }
 
 
@@ -136,8 +138,8 @@ if __name__ == "__main__":
 
         # Instantiation of the early stopping callback
         early_stopping = EarlyStopping(
-                                        monitor = "validation_loss",
-                                        min_delta = 0.01,
+                                        monitor="validation_loss",
+                                        min_delta=0.01,
                                         patience=6, 
                                         verbose=True,
                                         mode="min"
@@ -152,7 +154,7 @@ if __name__ == "__main__":
                                     filename="{epoch}-{validation_loss:.2f}",
                                     verbose=True,
                                     monitor="validation_loss",
-                                    save_last = False,
+                                    save_last=False,
                                     save_top_k=1,      
                                     mode="min",
                                     save_weights_only=True
@@ -164,7 +166,7 @@ if __name__ == "__main__":
                             devices=args.devices,
                             max_epochs=args.epochs, 
                             logger=tensorboard_logger,
-                            log_every_n_steps = 1,
+                            log_every_n_steps=1,
                             callbacks=[early_stopping, lr_monitor, checkpoint]
                         ) 
  
