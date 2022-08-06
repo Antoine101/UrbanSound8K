@@ -25,7 +25,64 @@ class UrbanSound8KDataset(Dataset):
         self.augmentation_parameters = augmentation_parameters
         self.to_gpus = to_gpus
         self.devices = devices
-        
+        if feature_name == "spectrogram":
+            self.spectrogram_transform = transforms.Spectrogram(
+                                                        n_fft = self.feature_processing_parameters["n_fft"],
+                                                        win_length = self.feature_processing_parameters["n_fft"],
+                                                        hop_length = self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"],
+                                                        pad = 0,
+                                                        window_fn = torch.hann_window,
+                                                        power = 2,
+                                                        normalized = True,
+                                                        wkwargs = None,
+                                                        center = False,
+                                                        pad_mode = "reflect",
+                                                        onesided = True
+                                                        ) 
+            if self.to_gpus:
+                with torch.no_grad():
+                    self.spectrogram_transform.to(devices)
+        elif feature_name == "mel-spectrogram":
+            self.mel_spectrogram_transform = transforms.MelSpectrogram(
+                                                        sample_rate = self.feature_processing_parameters["target_sample_rate"],
+                                                        n_fft = self.feature_processing_parameters["n_fft"],
+                                                        win_length = self.feature_processing_parameters["n_fft"],
+                                                        hop_length = self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"],
+                                                        f_min = 0,
+                                                        f_max = None,
+                                                        pad = 0,
+                                                        n_mels = self.feature_processing_parameters["n_mels"],
+                                                        window_fn = torch.hann_window,
+                                                        power = 2,
+                                                        normalized = True,
+                                                        wkwargs = None,
+                                                        center = True,
+                                                        pad_mode = "reflect",
+                                                        onesided = True,
+                                                        norm = None,
+                                                        mel_scale = "htk"
+                                                        )
+            if self.to_gpus:
+                with torch.no_grad():
+                    self.mel_spectrogram_transform.to(devices)
+        elif feature_name == "mfcc":
+            melkwargs = {
+                    "n_fft": self.feature_processing_parameters["n_fft"],
+                    "win_length": self.feature_processing_parameters["n_fft"],
+                    "hop_length": self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"]
+                }
+            self.mfcc_transform = transforms.MFCC(
+                                        sample_rate = self.feature_processing_parameters["target_sample_rate"],
+                                        n_mfcc = self.feature_processing_parameters["n_mfcc"],
+                                        dct_type = 2,
+                                        norm = "ortho",
+                                        log_mels = False,
+                                        melkwargs = melkwargs 
+                                        )
+            if self.to_gpus:
+                with torch.no_grad():
+                    self.mfcc_transform.to(devices)
+
 
     def __len__(self):
         return len(self.metadata)
@@ -36,7 +93,8 @@ class UrbanSound8KDataset(Dataset):
         class_id = torch.tensor(self._get_event_class_id(index), dtype=torch.long)
         signal, sr = self._get_event_signal(index)
         if self.to_gpus:
-            signal.to(self.devices)
+            with torch.no_grad():
+                signal.to(self.devices)
         signal = self._mix_down_if_necessary(signal)
         signal = self._resample_if_necessary(signal, sr)
         signal = self._cut_if_necessary(signal)
@@ -56,7 +114,8 @@ class UrbanSound8KDataset(Dataset):
         elif self.feature_name == "mfcc":
             feature = self._mfcc_transform(signal)
             if self.feature_augmentation:
-                feature = self._feature_augmentation(feature)      
+                feature = self._feature_augmentation(feature)
+        del signal      
         return index, audio_name, class_id, feature
 
     
@@ -135,65 +194,18 @@ class UrbanSound8KDataset(Dataset):
         return signal
 
     
-    def _spectrogram_transform(self, signal):
-        spectrogram_transform = transforms.Spectrogram(
-                                                        n_fft = self.feature_processing_parameters["n_fft"],
-                                                        win_length = self.feature_processing_parameters["n_fft"],
-                                                        hop_length = self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"],
-                                                        pad = 0,
-                                                        window_fn = torch.hann_window,
-                                                        power = 2,
-                                                        normalized = True,
-                                                        wkwargs = None,
-                                                        center = False,
-                                                        pad_mode = "reflect",
-                                                        onesided = True
-                                                        )  
-        spectrogram = spectrogram_transform(signal)
+    def _spectrogram_transform(self, signal): 
+        spectrogram = self.spectrogram_transform(signal)
         return spectrogram
 
     
     def _mel_spectrogram_transform(self, signal):
-        mel_spectrogram_transform = transforms.MelSpectrogram(
-                                                        sample_rate = self.feature_processing_parameters["target_sample_rate"],
-                                                        n_fft = self.feature_processing_parameters["n_fft"],
-                                                        win_length = self.feature_processing_parameters["n_fft"],
-                                                        hop_length = self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"],
-                                                        f_min = 0,
-                                                        f_max = None,
-                                                        pad = 0,
-                                                        n_mels = self.feature_processing_parameters["n_mels"],
-                                                        window_fn = torch.hann_window,
-                                                        power = 2,
-                                                        normalized = True,
-                                                        wkwargs = None,
-                                                        center = True,
-                                                        pad_mode = "reflect",
-                                                        onesided = True,
-                                                        norm = None,
-                                                        mel_scale = "htk"
-                                                        )
-        mel_spectrogram = mel_spectrogram_transform(signal)
+        mel_spectrogram = self.mel_spectrogram_transform(signal)
         return mel_spectrogram
 
 
     def _mfcc_transform(self, signal):
-
-        melkwargs = {
-            "n_fft": self.feature_processing_parameters["n_fft"],
-            "win_length": self.feature_processing_parameters["n_fft"],
-            "hop_length": self.feature_processing_parameters["n_fft"] // self.feature_processing_parameters["hop_denominator"]
-        }
-
-        mfcc_transform = transforms.MFCC(
-                                        sample_rate = self.feature_processing_parameters["target_sample_rate"],
-                                        n_mfcc = self.feature_processing_parameters["n_mfcc"],
-                                        dct_type = 2,
-                                        norm = "ortho",
-                                        log_mels = False,
-                                        melkwargs = melkwargs 
-                                        )
-        mfcc = mfcc_transform(signal)
+        mfcc = self.mfcc_transform(signal)
         return mfcc
 
     

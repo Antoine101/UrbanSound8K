@@ -58,8 +58,8 @@ if __name__ == "__main__":
     input_height, input_width = utils.calculate_input_shape(feature_name, feature_processing_parameters)
 
     # Augmentation
-    signal_augmentation = False
-    feature_augmentation = False
+    signal_augmentation = True
+    feature_augmentation = True
 
     # Data augmentation parameters
     augmentation_parameters = {
@@ -105,7 +105,7 @@ if __name__ == "__main__":
                                                             signal_augmentation = signal_augmentation, 
                                                             feature_augmentation = feature_augmentation,
                                                             augmentation_parameters=augmentation_parameters,
-                                                            to_gpus=True
+                                                            to_gpus=False
                                                         )
 
         # Instantiation of the model
