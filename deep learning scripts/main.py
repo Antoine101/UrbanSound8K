@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     # Parsing of the command line arguments
     parser = ArgumentParser()
-    parser.add_argument("--accelerator", default="auto", help="Type of accelerator: 'gpu', 'cpu', 'auto'")
+    parser.add_argument("--accelerator", default="cpu", help="Type of accelerator: 'gpu', 'cpu', 'auto'")
     parser.add_argument("--devices", default="auto", help="Number of devices (GPUs or CPU cores) to use: integer starting from 1 or 'auto'")
     parser.add_argument("--workers", type=int, default=4, help="Number of CPU cores to use as as workers for the dataloarders: integer starting from 1 to maximum number of cores on this machine")
     parser.add_argument("--epochs", type=int, default=60, help="Maximum number of epochs to run for")
